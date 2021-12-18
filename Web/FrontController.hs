@@ -13,7 +13,7 @@ import Web.Controller.User
 
 instance FrontController WebApplication where
     controllers =
-        [ startPage EventsAction
+        [ startPage (EventsAction "cal")
         , parseRoute @SessionsController
         , parseRoute @UserController
         -- Generator Marker

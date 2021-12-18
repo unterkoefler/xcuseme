@@ -5,16 +5,21 @@ import Web.View.Events.Index
 import Web.View.Events.New
 import Web.View.Events.Edit
 import Web.View.Events.Show
+import Web.View.Events.List
 import ValidationSupport.ValidateIsUniqueMultiColumn
 
 instance Controller EventsController where
     beforeAction = ensureIsUser
 
-    action EventsAction = do
+    action (EventsAction mode) = do
         events <- query @Event
             |> filterWhere (#userId, currentUserId)
             |> fetch
-        render IndexView { .. }
+        case toLower mode of
+            "list" ->
+                render ListView { .. }
+            _ ->
+                render IndexView { .. }
 
     action (NewEventAction eventType) = do
         let eventType' = do
@@ -57,7 +62,7 @@ instance Controller EventsController where
                 Right event -> do
                     event <- event |> createRecord
                     setSuccessMessage "Event created"
-                    redirectTo EventsAction
+                    redirectTo (EventsAction "cal")
 
     action DeleteEventAction { eventId } = do
         event <- fetch eventId
@@ -65,7 +70,7 @@ instance Controller EventsController where
 
         deleteRecord event
         setSuccessMessage "Event deleted"
-        redirectTo EventsAction
+        redirectTo (EventsAction "cal")
 
 buildEvent event = event
     |> set #userId currentUserId

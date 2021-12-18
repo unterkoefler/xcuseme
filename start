@@ -26,4 +26,4 @@ eval "$(direnv export bash)"
 # export CUSTOM_ENV_VAR=".."
 
 # Finally start the dev server
-RunDevServer
+npx concurrently --raw "RunDevServer" "npm run run-dev-elm"

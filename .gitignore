@@ -20,3 +20,12 @@ Config/client_session_key.aes
 
 # Ignore locally checked out IHP version
 IHP
+
+# elm
+.cache
+elm-stuff
+static/elm
+index.js
+index.js.map
+
+.parcel-cache

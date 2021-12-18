@@ -29,7 +29,7 @@ data UserController
 deriving instance Data EventType
 
 data EventsController
-    = EventsAction
+    = EventsAction { mode :: Text }
     | NewEventAction { eventType :: Text }
     | ShowEventAction { eventId :: !(Id Event) }
     | CreateEventAction

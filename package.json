@@ -1,0 +1,24 @@
+{
+  "name": "xcuseme",
+  "version": "1.0.0",
+  "description": "",
+  "main": "static/elm/index.js",
+  "scripts": {
+    "run-dev-elm": "npm run gen-types && parcel watch elm/index.js --dist-dir static/elm",
+    "build": "parcel build elm/index.js --dist-dir static/elm",
+    "gen-types": "nix-shell --run './Application/Script/GenerateElmTypes.hs'"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "node-elm-compiler": "^5.0.6",
+    "parcel": "^2.0.1"
+  },
+  "devDependencies": {
+    "@parcel/transformer-elm": "^2.0.1",
+    "concurrently": "^6.4.0",
+    "elm": "^0.19.1-5",
+    "elm-hot": "^1.1.6"
+  }
+}

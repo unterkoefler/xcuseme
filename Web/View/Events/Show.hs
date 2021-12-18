@@ -7,11 +7,11 @@ instance View ShowView where
     html ShowView { .. } = [hsx|
         {breadcrumb}
         <h1>Show Event</h1>
-        <p>{event}</p>
+        <p>{eventWidget event}</p>
 
     |]
         where
             breadcrumb = renderBreadcrumb
-                            [ breadcrumbLink "Events" EventsAction
+                            [ breadcrumbLink "Events" (EventsAction "cal")
                             , breadcrumbText "Show Event"
                             ]

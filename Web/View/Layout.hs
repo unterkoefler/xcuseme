@@ -59,12 +59,10 @@ scripts = [hsx|
         <script src={assetPath "/vendor/bootstrap.min.js"}></script>
         <script src={assetPath "/vendor/flatpickr.js"}></script>
         <script src={assetPath "/vendor/morphdom-umd.min.js"}></script>
-        <script src={assetPath "/vendor/turbolinks.js"}></script>
-        <script src={assetPath "/vendor/turbolinksInstantClick.js"}></script>
-        <script src={assetPath "/vendor/turbolinksMorphdom.js"}></script>
         <script src={assetPath "/helpers.js"}></script>
         <script src={assetPath "/ihp-auto-refresh.js"}></script>
         <script src={assetPath "/app.js"}></script>
+        <script src={assetPath "/elm/index.js"}></script>
     |]
 
 devScripts :: Html
