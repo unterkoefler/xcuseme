@@ -26,6 +26,7 @@ type alias Model =
     { currentDate : Date
     , selectedDate : Date
     , monthIndex : Int
+    , useDarkMode : Bool
     , widget : WidgetModel
     }
 
@@ -71,7 +72,15 @@ subscriptions model =
 
 view : Model -> Html Msg
 view model =
-    layout [ Font.size 16 ] <|
+    let
+       (bgColor, fontColor) =
+            case model.useDarkMode of
+                True ->
+                    (Colors.black, Colors.white)
+                False ->
+                    (Colors.white, Colors.black)
+    in
+    layout [ Font.size 16, Background.color bgColor, Font.color fontColor ] <|
     case model.widget of 
         ErrorModel m ->
             paragraph [] [ text m ]
@@ -83,7 +92,7 @@ view model =
                 , innerMenu = changeViewLink "cal" }
         EventCalendarModel events ->
             viewHome
-                { eventsView = eventCalendar { events = events, currentDate = model.currentDate, selectedDate = model.selectedDate, monthIndex = model.monthIndex }
+                { eventsView = eventCalendar { events = events, currentDate = model.currentDate, selectedDate = model.selectedDate, monthIndex = model.monthIndex, useDarkMode = model.useDarkMode }
                 , innerMenu = changeViewLink "list" }
 
 viewHome : { eventsView : Element Msg, innerMenu : Element Msg } -> Element Msg
@@ -203,7 +212,7 @@ viewEvent event =
         , paragraph [ Font.size 14 ] [ text event.description ]
         ]
 
-eventCalendar : { events: List Event, currentDate : Date, selectedDate : Date, monthIndex : Int } -> Element Msg
+eventCalendar : { events: List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> Element Msg
 eventCalendar args =
     let
         { monthIndex, currentDate, selectedDate, events } = args
@@ -267,7 +276,7 @@ weekDayLabels =
                 )
         )
 
-showWeek : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int } -> List Calendar.CalendarDate -> Element Msg
+showWeek : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> List Calendar.CalendarDate -> Element Msg
 showWeek args days =
     row 
         [ spacing 6
@@ -275,8 +284,8 @@ showWeek args days =
         ]
     <| List.map (showDay args) days
 
-showDay : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int } -> Calendar.CalendarDate -> Element Msg
-showDay { events, currentDate, selectedDate } { dayDisplay, date } =
+showDay : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> Calendar.CalendarDate -> Element Msg
+showDay { events, currentDate, selectedDate, useDarkMode } { dayDisplay, date } =
     let
         isFutureDate =
             Date.compare currentDate date == LT
@@ -286,11 +295,11 @@ showDay { events, currentDate, selectedDate } { dayDisplay, date } =
                 (True, _) ->
                     Colors.mediumGray
 
-                ( _, " " ) ->
-                    Colors.gray
+                ( _, "  " ) ->
+                    if useDarkMode then Colors.lightGray else Colors.gray
 
                 _ ->
-                    Colors.black
+                    if useDarkMode then Colors.white else Colors.black
 
         maybeEvent =
             eventForDay events date
@@ -513,6 +522,7 @@ init flags =
     ( { widget = initialWidgetModel flags
       , currentDate = Date.fromCalendarDate 1 Time.Nov 1995
       , selectedDate = Date.fromCalendarDate 1 Time.Nov 1995
+      , useDarkMode = .useDarkMode (decodeExtra flags)
       , monthIndex = 0
       }
     , Date.today |> Task.perform ReceiveDate
@@ -525,6 +535,16 @@ initialWidgetModel flags =
             widgetFlagToModel widget
         Err error ->
             ErrorModel (Json.Decode.errorToString error)
+
+decodeExtra : Json.Decode.Value -> { useDarkMode : Bool }
+decodeExtra flags =
+    case Json.Decode.decodeValue (Json.Decode.field "useDarkMode" Json.Decode.bool) flags of
+        Ok v ->
+            { useDarkMode = v }
+        Err error ->
+            let _ = Debug.log "decodeExtra error" error
+            in
+            { useDarkMode = False }
 
 widgetFlagToModel : Widget -> WidgetModel
 widgetFlagToModel widget =

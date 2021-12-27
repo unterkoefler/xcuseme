@@ -25,13 +25,16 @@ gray =
     rgb255 100 100 100
 
 lightGray =
-    rgb255 200 200 200
+    rgb255 180 180 180
 
 lightGrayForSvg =
     Color.rgb255 200 200 200
 
 mediumGray =
-    rgb255 180 180 180
+    rgb255 150 150 150
 
 black =
     rgb255 0 0 0
+
+white =
+    rgb255 255 255 255
