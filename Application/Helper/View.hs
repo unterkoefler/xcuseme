@@ -4,7 +4,10 @@ module Application.Helper.View (
     eventWidget,
     eventListWidget,
     eventCalendarWidget,
+    navBarWidget,
+    newEventWidget,
     Widget(..),
+    NavBarContext(..)
 ) where
 
 -- Here you can add functions which are available in all your views
@@ -15,11 +18,14 @@ import Web.JsonTypes
 import qualified Generics.SOP as SOP
 import GHC.Generics
 import Language.Haskell.To.Elm
+import Application.Lib.DerivingViaElm ( ElmType(..) )
 
 data Widget
     = EventWidget EventJSON
     | EventListWidget [EventJSON]
     | EventCalendarWidget [EventJSON]
+    | NavBarWidget NavBarContext
+    | NewEventWidget EventJSON
     deriving ( Generic
              , Aeson.ToJSON
              , SOP.Generic
@@ -47,6 +53,19 @@ instance HasElmEncoder Aeson.Value Widget where
                 Language.Haskell.To.Elm.defaultOptions Aeson.defaultOptions
 
 
+data NavBarContext = NavBarContext
+    { loggedIn :: Bool
+    } deriving ( Generic
+               , SOP.Generic
+               , SOP.HasDatatypeInfo
+               )
+    deriving ( Aeson.ToJSON
+             , Aeson.FromJSON
+             , HasElmType
+             , HasElmDecoder Aeson.Value
+             , HasElmEncoder Aeson.Value)
+        via ElmType "Api.Generated.NavBarContext" NavBarContext
+
 -- Widgets
 
 eventWidget :: Event -> Html
@@ -55,6 +74,13 @@ eventWidget event = [hsx|
 |]
     where
         eventData :: Widget = EventWidget $ eventToJSON event
+
+newEventWidget :: Event -> Html
+newEventWidget event = [hsx|
+    <div data-flags={encode eventData} class="elm"></div>
+|]
+    where
+        eventData :: Widget = NewEventWidget $ eventToJSON event
 
 eventListWidget :: [Event] -> Html
 eventListWidget events = [hsx|
@@ -67,3 +93,8 @@ eventCalendarWidget events = [hsx|
     <div data-flags={encode eventCalendarData} class="elm"></div>
 |]
     where eventCalendarData :: Widget = EventCalendarWidget $ map eventToJSON events
+
+navBarWidget :: NavBarContext -> Html
+navBarWidget context = [hsx|
+    <div data-flags={encode $ NavBarWidget context} class="elm"></div>
+|]

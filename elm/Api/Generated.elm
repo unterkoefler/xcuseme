@@ -8,6 +8,9 @@ module Api.Generated exposing
     , EventType(..)
     , eventTypeEncoder
     , eventTypeDecoder
+    , NavBarContext
+    , navBarContextEncoder
+    , navBarContextDecoder
     )
 
 import Json.Decode
@@ -19,6 +22,8 @@ type Widget
     = EventWidget Event
     | EventListWidget (List Event)
     | EventCalendarWidget (List Event)
+    | NavBarWidget NavBarContext
+    | NewEventWidget Event
 
 
 widgetEncoder : Widget -> Json.Encode.Value
@@ -36,6 +41,14 @@ widgetEncoder a =
             Json.Encode.object [ ("tag" , Json.Encode.string "EventCalendarWidget")
             , ("contents" , Json.Encode.list eventEncoder b) ]
 
+        NavBarWidget b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "NavBarWidget")
+            , ("contents" , navBarContextEncoder b) ]
+
+        NewEventWidget b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "NewEventWidget")
+            , ("contents" , eventEncoder b) ]
+
 
 widgetDecoder : Json.Decode.Decoder Widget
 widgetDecoder =
@@ -52,6 +65,14 @@ widgetDecoder =
         "EventCalendarWidget" ->
             Json.Decode.succeed EventCalendarWidget |>
             Json.Decode.Pipeline.required "contents" (Json.Decode.list eventDecoder)
+
+        "NavBarWidget" ->
+            Json.Decode.succeed NavBarWidget |>
+            Json.Decode.Pipeline.required "contents" navBarContextDecoder
+
+        "NewEventWidget" ->
+            Json.Decode.succeed NewEventWidget |>
+            Json.Decode.Pipeline.required "contents" eventDecoder
 
         _ ->
             Json.Decode.fail "No matching constructor")
@@ -114,3 +135,18 @@ eventTypeDecoder =
 
         _ ->
             Json.Decode.fail "No matching constructor")
+
+
+type alias NavBarContext  =
+    { loggedIn : Bool }
+
+
+navBarContextEncoder : NavBarContext -> Json.Encode.Value
+navBarContextEncoder a =
+    Json.Encode.object [("loggedIn" , Json.Encode.bool a.loggedIn)]
+
+
+navBarContextDecoder : Json.Decode.Decoder NavBarContext
+navBarContextDecoder =
+    Json.Decode.succeed NavBarContext |>
+    Json.Decode.Pipeline.required "loggedIn" Json.Decode.bool

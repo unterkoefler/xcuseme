@@ -20,5 +20,10 @@ run = do
     definitions =
         Simplification.simplifyDefinition
             -- Add Elm types here
-            <$> jsonDefinitions @Widget <> jsonDefinitions @EventJSON <> jsonDefinitions @EventType
+            <$>
+                jsonDefinitions @Widget
+                <> jsonDefinitions @EventJSON
+                <> jsonDefinitions @EventType
+                <> jsonDefinitions @NavBarContext
+
     modules = Pretty.modules definitions

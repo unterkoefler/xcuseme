@@ -7,6 +7,8 @@ import Web.View.Events.Edit
 import Web.View.Events.Show
 import Web.View.Events.List
 import ValidationSupport.ValidateIsUniqueMultiColumn
+import Data.Time
+import Data.Time.Clock
 
 instance Controller EventsController where
     beforeAction = ensureIsUser
@@ -21,13 +23,20 @@ instance Controller EventsController where
             _ ->
                 render IndexView { .. }
 
-    action (NewEventAction eventType) = do
+    action (NewEventAction { eventType, year, month, day }) = do
         let eventType' = do
             case toLower eventType of
                 "exercise" -> Exercise
                 "excuse" -> Excuse
                 _ -> Exercise
+        date <- do
+            case (year, month, day) of
+                (Just y, Just m, Just d) ->
+                    pure $ fromGregorian (toInteger y) m d
+                _ ->
+                    getCurrentTime >>= return . utctDay
         let event = newRecord |> set #eventType eventType'
+                              |> set #date date
         render NewView { .. }
 
     action ShowEventAction { eventId } = do

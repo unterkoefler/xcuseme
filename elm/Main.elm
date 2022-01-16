@@ -1,12 +1,15 @@
 module Main exposing (main)
 
-import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder)
+import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext)
 import Json.Decode
+import Json.Encode
 import Browser
+import Browser.Navigation
 import Calendar
 import Colors
 import Color as SvgColor
 import Date exposing (Date)
+import DatePicker
 import Element exposing (..)
 import Element.Background as Background
 import Element.Border as Border
@@ -15,6 +18,7 @@ import Element.Input as Input
 import Element.Region as Region
 import Html exposing (Html)
 import Html.Attributes
+import Http
 import Material.Icons.Maps exposing (directions_run, hotel)
 import Material.Icons.Content exposing (add)
 import Svg exposing (Svg)
@@ -28,19 +32,29 @@ type alias Model =
     , monthIndex : Int
     , useDarkMode : Bool
     , widget : WidgetModel
+    , pickerModel : DatePicker.Model
+    , pickerDateText : String
     }
 
 type WidgetModel
     = EventModel Event
     | EventListModel (List Event)
     | EventCalendarModel (List Event)
+    | NavBarModel NavBarContext
     | ErrorModel String
+    | NewEventModel Event
 
 type Msg
     = NoOp
     | ReceiveDate Date
     | DateSelected Date
     | UpdateMonthIndex Int
+    | UpdateEventDescription String
+    | UpdateEventDate DatePicker.ChangeEvent
+    | CreateEvent
+    | EventCreated (Result Http.Error ())
+    | Logout
+    | LoggedOut (Result Http.Error ())
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -49,7 +63,16 @@ update msg model =
             ( model, Cmd.none )
 
         ReceiveDate date ->
-            ( { model | currentDate = date, selectedDate = date }
+            ( { model 
+                | currentDate = date
+                , selectedDate = date 
+                , pickerModel = DatePicker.setToday date model.pickerModel
+                , pickerDateText = 
+                    if model.pickerDateText == "" then
+                        Date.format "Y-MM-dd" date
+                    else
+                        model.pickerDateText
+              }
             , Cmd.none 
             )
 
@@ -59,12 +82,120 @@ update msg model =
             )
 
         UpdateMonthIndex idx ->
-            let _ = Debug.log "monthIndex" idx
-            in
             ( { model | monthIndex = idx }
             , Cmd.none
             )
 
+        UpdateEventDescription description ->
+            case model.widget of
+                NewEventModel event ->
+                    ( { model | widget = NewEventModel { event | description = description } }
+                    , Cmd.none
+                    )
+                _ ->
+                    ( model, Cmd.none )
+
+        UpdateEventDate change ->
+            case model.widget of
+                NewEventModel event ->
+                    ( updateEventDate model event change, Cmd.none )
+                _ ->
+                    ( model, Cmd.none )
+        CreateEvent ->
+            case model.widget of
+                NewEventModel event ->
+                    ( model, createEvent event model.pickerDateText )
+                _ ->
+                    ( model, Cmd.none )
+
+        EventCreated (Err e) ->
+            let
+                _ = Debug.log "CreateEvent failed" e
+            in
+            ( model, Cmd.none )
+
+        EventCreated (Ok _) ->
+            ( model, Cmd.none )
+
+        Logout ->
+            ( model
+            , logout
+            )
+
+        LoggedOut (Err e) ->
+            let
+                _ = Debug.log "Logout failed" e
+            in
+            ( model, Cmd.none )
+
+        LoggedOut (Ok _) ->
+            ( model, Browser.Navigation.load <| Url.Builder.absolute [ "NewSession" ] [] )
+
+updateEventDate : Model -> Event -> DatePicker.ChangeEvent -> Model
+updateEventDate model event change =
+    case change of
+        DatePicker.DateChanged date ->
+            updateEventDateAndClosePicker model event date
+        DatePicker.PickerChanged subMsg ->
+            { model | pickerModel = model.pickerModel |> DatePicker.update subMsg }
+
+        DatePicker.TextChanged newText ->
+            case parseDate newText of
+                Just date ->
+                    updateEventDateAndClosePicker model event date
+                Nothing ->
+                    { model | pickerDateText = newText }
+
+parseDate : String -> Maybe Date
+parseDate str =
+    str 
+        |> Date.fromIsoString
+        |> Result.toMaybe
+
+updateEventDateAndClosePicker : Model -> Event -> Date -> Model
+updateEventDateAndClosePicker model event date =
+    let
+        newEvent = 
+            { event 
+                | year = Date.year date
+                , month = Date.monthNumber date
+                , day = Date.day date
+            }
+    in
+    { model
+        | widget = NewEventModel event -- TODO: not always a new event
+        , pickerModel = model.pickerModel |> DatePicker.close
+        , pickerDateText = Date.format "Y-MM-dd" date
+    }
+
+createEvent : Event -> String -> Cmd Msg
+createEvent event pickerDateText =
+    let
+        eventType = 
+            case event.eventType of
+                Exercise ->
+                    "exercise"
+                Excuse ->
+                    "excuse"
+    in
+    Http.post
+        { url = Url.Builder.absolute [ "CreateEvent" ] []
+        , body = Http.jsonBody <|
+            Json.Encode.object 
+                [ ( "eventType", Json.Encode.string eventType )
+                , ( "date", Json.Encode.string pickerDateText )
+                , ( "description", Json.Encode.string event.description )
+                ]
+        , expect = Http.expectWhatever EventCreated
+        }
+
+logout : Cmd Msg
+logout =
+    Http.post
+        { url = Url.Builder.absolute [ "DeleteSession" ] []
+        , body = Http.stringBody "application/x-www-form-urlencoded" "_method=DELETE"
+        , expect = Http.expectWhatever LoggedOut
+        }
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -79,40 +210,119 @@ view model =
                     (Colors.black, Colors.white)
                 False ->
                     (Colors.white, Colors.black)
+
+       options = 
+           case model.widget of
+               NavBarModel _ ->
+                   []
+               _ ->
+                   [ noStaticStyleSheet ]
     in
-    layout [ Font.size 16, Background.color bgColor, Font.color fontColor ] <|
+    layoutWith { options = options }
+         [ nunito, Font.size 16, Background.color bgColor ] <|
     case model.widget of 
         ErrorModel m ->
             paragraph [] [ text m ]
         EventModel e ->
             viewEvent e
+        NavBarModel context ->
+            navBar context
         EventListModel events ->
             viewHome
                 { eventsView = eventCards events
-                , innerMenu = changeViewLink "cal" }
+                , innerMenu = changeViewLink "cal" 
+                , selectedDate = model.selectedDate
+                }
         EventCalendarModel events ->
             viewHome
-                { eventsView = eventCalendar { events = events, currentDate = model.currentDate, selectedDate = model.selectedDate, monthIndex = model.monthIndex, useDarkMode = model.useDarkMode }
-                , innerMenu = changeViewLink "list" }
+                { eventsView = eventCalendar 
+                    { events = events, currentDate = model.currentDate, selectedDate = model.selectedDate, monthIndex = model.monthIndex, useDarkMode = model.useDarkMode }
+                , innerMenu = changeViewLink "list" 
+                , selectedDate = model.selectedDate
+                }
+        NewEventModel event ->
+            newEventForm { event = event, pickerModel = model.pickerModel, currentDate = model.currentDate, pickerDateText = model.pickerDateText }
 
-viewHome : { eventsView : Element Msg, innerMenu : Element Msg } -> Element Msg
-viewHome { eventsView, innerMenu } =
+
+nunito : Attribute msg
+nunito =
+    Font.family
+        [ Font.typeface "Nunito"
+        , Font.serif
+        ]
+
+viewHome : { eventsView : Element Msg, innerMenu : Element Msg, selectedDate : Date } -> Element Msg
+viewHome { eventsView, innerMenu, selectedDate } =
     column
         [ spacing 24
         , width fill
         , height fill
+        , paddingXY 48 0
         ]
         [ column [ spacing 12, width fill ]
-            [ logEventButton Exercise 
-            , logEventButton Excuse
+            [ logEventButton Exercise selectedDate
+            , logEventButton Excuse selectedDate
             ]
         , innerMenu
         , eventsView
         ]
 
-logEventButton : EventType -> Element Msg
-logEventButton eventType =
-    -- TODO: disable if selected
+navBar : NavBarContext -> Element Msg
+navBar context =
+    column
+        [ width fill
+        ]
+        [ header context
+        , subHeader
+        ]
+
+header : NavBarContext -> Element Msg
+header { loggedIn } =
+    let
+        buttons = 
+            case loggedIn of
+                True ->
+                    [ Input.button [ width fill, alignRight ]
+                        { label = text "Logout" 
+                        , onPress = Just Logout
+                        }
+                    ]
+                False ->
+                    []
+    in
+        row 
+            [ width fill
+            , padding 24 
+            , Background.color Colors.indigo
+            ]
+            [ link 
+                [ Region.heading 1
+                , Font.size 48
+                , paddingEach { left = 0, right = 12, top = 0, bottom = 0 }
+                ]
+                { label = el [ Font.color Colors.white  ] <| text "XcuseMe"
+                , url = Url.Builder.absolute [] []
+                }
+            , row [ alignRight ] buttons
+            ]
+
+
+subHeader : Element Msg
+subHeader =
+    paragraph 
+        [ Region.heading 2
+        , padding 12
+        , Font.size 18
+        , Font.italic
+        , Background.color Colors.indigoLighter
+        ]
+        [ text "Exercise tracking for real people" ]
+        
+            
+
+logEventButton : EventType -> Date -> Element Msg
+logEventButton eventType selectedDate =
+    -- TODO: disable if there is an existing event
     let
         eventTypeString =
             case eventType of
@@ -123,8 +333,11 @@ logEventButton eventType =
         url =
             Url.Builder.absolute
                 [ "NewEvent" ]
-                [ Url.Builder.string "eventType" (eventTypeString) ]
-                -- TODO: add date params
+                [ Url.Builder.string "eventType" (eventTypeString)
+                , Url.Builder.int "year" <| Date.year selectedDate
+                , Url.Builder.int "month" <| Date.monthNumber selectedDate
+                , Url.Builder.int "day" <| Date.day selectedDate
+                ]
 
         color =
             case eventType of
@@ -489,6 +702,73 @@ card { lead, labelText, action } =
                 , onPress = onPress
                 }
 
+newEventForm : { event : Event, pickerModel : DatePicker.Model, currentDate : Date, pickerDateText : String } -> Element Msg
+newEventForm { event, pickerModel, currentDate, pickerDateText } =
+    let
+        defaultSettings =
+            DatePicker.defaultSettings
+        datePickerSettings =
+            { defaultSettings
+                | disabled = \day -> Date.compare currentDate day == LT
+                , firstDayOfWeek = Time.Sun
+            }
+        (eventTypeStr, saveButtonColor) =
+            case event.eventType of
+                Excuse ->
+                    ("Excuse", Colors.red )
+                Exercise ->
+                    ("Exercise", Colors.teal )
+    in
+    column
+        [ spacing 24
+        , width fill
+        , paddingXY 24 0
+        ]
+        [ DatePicker.input []
+            { onChange = UpdateEventDate
+            , selected = Just <| eventToDate event
+            , text = pickerDateText
+            , label = Input.labelLeft [] <| text "Date:"
+            , placeholder = Nothing
+            , model = pickerModel
+            , settings = datePickerSettings
+            }
+        , Input.multiline []
+            { onChange = UpdateEventDescription
+            , text = event.description
+            , placeholder = Nothing
+            , label = Input.labelAbove [] <| text "What's going on?"
+            , spellcheck = False
+            }
+        , row 
+            [ spacing 12
+            , width fill
+            ]
+            [ link
+                [ alignLeft
+                , Border.rounded 4
+                , Border.color Colors.darkRed
+                , Border.width 1
+                , paddingXY 24 12
+                , Font.color Colors.darkRed
+                ]
+                { label = text "Cancel"
+                , url = Url.Builder.absolute [] []
+                }
+            , Input.button
+                [ alignRight
+                , Border.rounded 4
+                , Border.color Colors.black
+                , Border.width 1
+                , paddingXY 24 12
+                , Background.color saveButtonColor
+                ]
+                { label = text <| "Save " ++ eventTypeStr
+                , onPress = Just CreateEvent
+                }
+            ]
+        ]
+
 
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
@@ -519,11 +799,22 @@ main =
 
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flags =
+    let
+        widget = initialWidgetModel flags
+        pickerDateText =
+            case widget of
+                NewEventModel event ->
+                    Date.format "Y-MM-dd" <| eventToDate event
+                _ ->
+                    ""
+    in
     ( { widget = initialWidgetModel flags
       , currentDate = Date.fromCalendarDate 1 Time.Nov 1995
       , selectedDate = Date.fromCalendarDate 1 Time.Nov 1995
       , useDarkMode = .useDarkMode (decodeExtra flags)
       , monthIndex = 0
+      , pickerModel = DatePicker.init
+      , pickerDateText = pickerDateText
       }
     , Date.today |> Task.perform ReceiveDate
     )
@@ -555,3 +846,7 @@ widgetFlagToModel widget =
             EventListModel events
         EventCalendarWidget events ->
             EventCalendarModel events
+        NavBarWidget context ->
+            NavBarModel context
+        NewEventWidget event ->
+            NewEventModel event

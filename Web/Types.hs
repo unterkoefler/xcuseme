@@ -30,7 +30,7 @@ deriving instance Data EventType
 
 data EventsController
     = EventsAction { mode :: Text }
-    | NewEventAction { eventType :: Text }
+    | NewEventAction { eventType :: Text, year :: Maybe Int, month :: Maybe Int, day :: Maybe Int }
     | ShowEventAction { eventId :: !(Id Event) }
     | CreateEventAction
     | EditEventAction { eventId :: !(Id Event) }

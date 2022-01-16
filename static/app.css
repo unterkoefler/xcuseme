@@ -1,11 +1,18 @@
 body {
     background-color: white;
-    color: black;
 }
 
 @media (prefers-color-scheme: dark) {
   body {
       background-color: black;
-      color: white
   }
+}
+
+.navBar {
+    margin-bottom: 24px;
+}
+
+@font-face {
+    font-family: Nunito;
+    src: url(fonts/Nunito-Regular.ttf);
 }
