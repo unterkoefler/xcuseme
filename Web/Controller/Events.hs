@@ -71,7 +71,7 @@ instance Controller EventsController where
                 Right event -> do
                     event <- event |> createRecord
                     setSuccessMessage "Event created"
-                    redirectTo (EventsAction "cal")
+                    render NewView { .. }
 
     action DeleteEventAction { eventId } = do
         event <- fetch eventId

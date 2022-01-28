@@ -10,6 +10,7 @@ import qualified Generics.SOP as SOP
 import Language.Haskell.To.Elm
 import Application.Lib.DerivingViaElm ( ElmType(..) )
 import Data.Time
+import IHP.ModelSupport ( Violation(..) )
 
 -- JSON serializable types and functions
 -- -- for exposing IHP data to Elm and JSON responses
@@ -32,6 +33,23 @@ instance HasElmEncoder Aeson.Value EventType where
     elmEncoderDefinition =
         Just $ deriveElmJSONEncoder @EventType defaultOptions Aeson.defaultOptions "Api.Generated.eventTypeEncoder"
 
+deriving instance Generic Violation
+deriving instance SOP.Generic Violation
+deriving instance SOP.HasDatatypeInfo Violation
+deriving instance Aeson.ToJSON Violation
+deriving instance Aeson.FromJSON Violation
+
+instance HasElmType Violation where
+    elmDefinition =
+        Just $ deriveElmTypeDefinition @Violation defaultOptions "Api.Generated.Violation"
+
+instance HasElmDecoder Aeson.Value Violation where
+    elmDecoderDefinition =
+        Just $ deriveElmJSONDecoder @Violation defaultOptions Aeson.defaultOptions "Api.Generated.violationDecoder"
+
+instance HasElmEncoder Aeson.Value Violation where
+    elmEncoderDefinition =
+        Just $ deriveElmJSONEncoder @Violation defaultOptions Aeson.defaultOptions "Api.Generated.violationEncoder"
 
 data EventJSON = EventJSON
     { id :: Text
@@ -40,6 +58,7 @@ data EventJSON = EventJSON
     , day :: Int
     , month :: Int
     , year :: Int
+    , errors :: ![(Text, Violation)]
     } deriving ( Generic
                , SOP.Generic
                , SOP.HasDatatypeInfo
@@ -55,12 +74,14 @@ eventToJSON :: Event -> EventJSON
 eventToJSON event =
     let date = get #date event
         (y, m, d) = toGregorian date
+        metaBag = get #meta event
     in EventJSON {
         id = show $ get #id event,
         eventType = get #eventType event,
         description = get #description event,
         year = fromInteger y,
         month = m,
-        day = d
+        day = d,
+        errors = annotations metaBag
     }
 

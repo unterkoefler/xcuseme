@@ -1,6 +1,6 @@
 module Main exposing (main)
 
-import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext)
+import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), eventDecoder)
 import Json.Decode
 import Json.Encode
 import Browser
@@ -52,7 +52,7 @@ type Msg
     | UpdateEventDescription String
     | UpdateEventDate DatePicker.ChangeEvent
     | CreateEvent
-    | EventCreated (Result Http.Error ())
+    | EventCreated (Result Http.Error Event)
     | Logout
     | LoggedOut (Result Http.Error ())
 
@@ -114,8 +114,15 @@ update msg model =
             in
             ( model, Cmd.none )
 
-        EventCreated (Ok _) ->
-            ( model, Cmd.none )
+        EventCreated (Ok event) ->
+            case event.errors of
+                [] ->
+                    ( model, Browser.Navigation.load <| Url.Builder.absolute [] [] )
+
+                _ ->
+                    ( { model | widget = NewEventModel event }
+                    , Cmd.none 
+                    )
 
         Logout ->
             ( model
@@ -178,23 +185,47 @@ createEvent event pickerDateText =
                 Excuse ->
                     "excuse"
     in
-    Http.post
-        { url = Url.Builder.absolute [ "CreateEvent" ] []
+    ihpRequest
+        { method = "POST"
+        , headers = []
+        , url = Url.Builder.absolute [ "CreateEvent" ] []
         , body = Http.jsonBody <|
             Json.Encode.object 
                 [ ( "eventType", Json.Encode.string eventType )
                 , ( "date", Json.Encode.string pickerDateText )
                 , ( "description", Json.Encode.string event.description )
                 ]
-        , expect = Http.expectWhatever EventCreated
+        , expect = Http.expectJson EventCreated eventDecoder 
         }
 
 logout : Cmd Msg
 logout =
-    Http.post
-        { url = Url.Builder.absolute [ "DeleteSession" ] []
+    ihpRequest
+        { method = "POST"
+        , headers = []
+        , url = Url.Builder.absolute [ "DeleteSession" ] []
         , body = Http.stringBody "application/x-www-form-urlencoded" "_method=DELETE"
         , expect = Http.expectWhatever LoggedOut
+        }
+
+ihpRequest :
+    { method : String
+    , headers : List Http.Header
+    , url : String
+    , body : Http.Body
+    , expect : Http.Expect msg
+    }
+    -> Cmd msg
+ihpRequest { method, headers, url, body, expect } =
+    Http.request
+        { method = method
+        , headers =
+            [ Http.header "Accept" "application/json" ] ++ headers
+        , url = url
+        , body = body
+        , expect = expect
+        , timeout = Nothing
+        , tracker = Nothing
         }
 
 subscriptions : Model -> Sub Msg
@@ -628,13 +659,18 @@ isEventOnDate date { year, month, day } =
 
 eventCards : List Event -> Element Msg
 eventCards events =
-    column
-        [ width fill
-        , scrollbarY
-        , height <| minimum 400 <| fill
-        ]
-    <|
-        List.map eventCard events
+    case events of
+        [] ->
+            paragraph [ Font.center, Font.italic, width fill ]
+                [ text "Nothing logged yet" ]
+        _ ->
+            column
+                [ width fill
+                , scrollbarY
+                , height <| minimum 400 <| fill
+                ]
+            <|
+                List.map eventCard events
 
 eventCard : Event -> Element Msg
 eventCard event =
@@ -718,6 +754,18 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
                     ("Excuse", Colors.red )
                 Exercise ->
                     ("Exercise", Colors.teal )
+        
+        descriptionError : Maybe String
+        descriptionError =
+            event.errors
+                |> List.filter (\(fieldName, violation) -> fieldName == "description")
+                |> List.head
+                |> Maybe.map 
+                    (\(fieldName, violation) ->
+                        case violation of
+                            TextViolation { message } -> message
+                            HtmlViolation { message } -> message
+                    )
     in
     column
         [ spacing 24
@@ -740,6 +788,15 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
             , label = Input.labelAbove [] <| text "What's going on?"
             , spellcheck = False
             }
+        , case descriptionError of
+            Nothing ->
+                Element.none
+            Just message  ->
+                paragraph 
+                    [ Font.italic
+                    , Font.color Colors.darkRed
+                    ]
+                    [ text message ]
         , row 
             [ spacing 12
             , width fill

@@ -11,6 +11,9 @@ module Api.Generated exposing
     , NavBarContext
     , navBarContextEncoder
     , navBarContextDecoder
+    , Violation(..)
+    , violationEncoder
+    , violationDecoder
     )
 
 import Json.Decode
@@ -84,7 +87,8 @@ type alias Event  =
     , description : String
     , day : Int
     , month : Int
-    , year : Int }
+    , year : Int
+    , errors : List (String , Violation) }
 
 
 eventEncoder : Event -> Json.Encode.Value
@@ -94,7 +98,11 @@ eventEncoder a =
     , ("description" , Json.Encode.string a.description)
     , ("day" , Json.Encode.int a.day)
     , ("month" , Json.Encode.int a.month)
-    , ("year" , Json.Encode.int a.year) ]
+    , ("year" , Json.Encode.int a.year)
+    , ("errors" , Json.Encode.list (\b -> case b of
+        (c , d) ->
+            Json.Encode.list identity [ Json.Encode.string c
+            , violationEncoder d ]) a.errors) ]
 
 
 eventDecoder : Json.Decode.Decoder Event
@@ -105,7 +113,8 @@ eventDecoder =
     Json.Decode.Pipeline.required "description" Json.Decode.string |>
     Json.Decode.Pipeline.required "day" Json.Decode.int |>
     Json.Decode.Pipeline.required "month" Json.Decode.int |>
-    Json.Decode.Pipeline.required "year" Json.Decode.int
+    Json.Decode.Pipeline.required "year" Json.Decode.int |>
+    Json.Decode.Pipeline.required "errors" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 violationDecoder)))
 
 
 type EventType 
@@ -150,3 +159,36 @@ navBarContextDecoder : Json.Decode.Decoder NavBarContext
 navBarContextDecoder =
     Json.Decode.succeed NavBarContext |>
     Json.Decode.Pipeline.required "loggedIn" Json.Decode.bool
+
+
+type Violation 
+    = TextViolation { message : String }
+    | HtmlViolation { message : String }
+
+
+violationEncoder : Violation -> Json.Encode.Value
+violationEncoder a =
+    case a of
+        TextViolation b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "TextViolation")
+            , ("message" , Json.Encode.string b.message) ]
+
+        HtmlViolation b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "HtmlViolation")
+            , ("message" , Json.Encode.string b.message) ]
+
+
+violationDecoder : Json.Decode.Decoder Violation
+violationDecoder =
+    Json.Decode.field "tag" Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "TextViolation" ->
+            Json.Decode.map TextViolation (Json.Decode.succeed (\b -> { message = b }) |>
+            Json.Decode.Pipeline.required "message" Json.Decode.string)
+
+        "HtmlViolation" ->
+            Json.Decode.map HtmlViolation (Json.Decode.succeed (\b -> { message = b }) |>
+            Json.Decode.Pipeline.required "message" Json.Decode.string)
+
+        _ ->
+            Json.Decode.fail "No matching constructor")
