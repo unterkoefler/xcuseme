@@ -25,7 +25,7 @@ IHP
 .cache
 elm-stuff
 static/elm
-index.js
+static/index.js
 index.js.map
 
 .parcel-cache
