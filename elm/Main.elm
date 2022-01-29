@@ -43,6 +43,7 @@ type WidgetModel
     | NavBarModel NavBarContext
     | ErrorModel String
     | NewEventModel Event
+    | EditEventModel Event
 
 type Msg
     = NoOp
@@ -53,6 +54,8 @@ type Msg
     | UpdateEventDate DatePicker.ChangeEvent
     | CreateEvent
     | EventCreated (Result Http.Error Event)
+    | UpdateEvent
+    | EventUpdated (Result Http.Error Event)
     | Logout
     | LoggedOut (Result Http.Error ())
 
@@ -92,12 +95,20 @@ update msg model =
                     ( { model | widget = NewEventModel { event | description = description } }
                     , Cmd.none
                     )
+
+                EditEventModel event ->
+                    ( { model | widget = EditEventModel { event | description = description} }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
         UpdateEventDate change ->
             case model.widget of
                 NewEventModel event ->
+                    ( updateEventDate model event change, Cmd.none )
+                EditEventModel event ->
                     ( updateEventDate model event change, Cmd.none )
                 _ ->
                     ( model, Cmd.none )
@@ -122,6 +133,29 @@ update msg model =
                 _ ->
                     ( { model | widget = NewEventModel event }
                     , Cmd.none 
+                    )
+        UpdateEvent ->
+            case model.widget of
+                EditEventModel event ->
+                    ( model, updateEvent event model.pickerDateText )
+                _ ->
+                    ( model, Cmd.none )
+
+        EventUpdated (Err e) ->
+            let
+                _ = Debug.log "UpdateEvent failed" e
+            in
+            ( model, Cmd.none )
+
+        EventUpdated (Ok event) ->
+            case event.errors of
+                [] ->
+                    ( model
+                    , Browser.Navigation.load <| Url.Builder.absolute [ "ShowEvent" ] [ Url.Builder.string "eventId" event.id ] )
+
+                _ ->
+                    ( { model | widget = EditEventModel event }
+                    , Cmd.none
                     )
 
         Logout ->
@@ -168,35 +202,64 @@ updateEventDateAndClosePicker model event date =
                 , month = Date.monthNumber date
                 , day = Date.day date
             }
+
+        newWidget = 
+            case model.widget of
+                NewEventModel _ ->
+                    NewEventModel newEvent
+
+                EditEventModel _ ->
+                    EditEventModel newEvent
+
+                _ ->
+                    -- something went wrong
+                    model.widget
     in
     { model
-        | widget = NewEventModel event -- TODO: not always a new event
+        | widget = newWidget
         , pickerModel = model.pickerModel |> DatePicker.close
         , pickerDateText = Date.format "Y-MM-dd" date
     }
 
 createEvent : Event -> String -> Cmd Msg
 createEvent event pickerDateText =
-    let
-        eventType = 
-            case event.eventType of
-                Exercise ->
-                    "exercise"
-                Excuse ->
-                    "excuse"
-    in
     ihpRequest
         { method = "POST"
         , headers = []
         , url = Url.Builder.absolute [ "CreateEvent" ] []
         , body = Http.jsonBody <|
             Json.Encode.object 
-                [ ( "eventType", Json.Encode.string eventType )
+                [ ( "eventType", event.eventType |> eventTypeToString |> Json.Encode.string )
                 , ( "date", Json.Encode.string pickerDateText )
                 , ( "description", Json.Encode.string event.description )
                 ]
         , expect = Http.expectJson EventCreated eventDecoder 
         }
+
+eventTypeToString : EventType -> String
+eventTypeToString eventType =
+    case eventType of
+        Exercise ->
+            "exercise"
+        Excuse ->
+            "excuse"
+
+
+updateEvent : Event -> String -> Cmd Msg
+updateEvent event pickerDateText =
+    ihpRequest
+        { method = "POST"
+        , headers = []
+        , url = Url.Builder.absolute [ "UpdateEvent" ] [ Url.Builder.string "eventId" event.id ]
+        , body = Http.jsonBody <|
+            Json.Encode.object 
+                [ ( "eventType", event.eventType |> eventTypeToString |> Json.Encode.string )
+                , ( "date", Json.Encode.string pickerDateText )
+                , ( "description", Json.Encode.string event.description )
+                ]
+        , expect = Http.expectJson EventUpdated eventDecoder 
+        }
+
 
 logout : Cmd Msg
 logout =
@@ -272,7 +335,22 @@ view model =
                 , selectedDate = model.selectedDate
                 }
         NewEventModel event ->
-            newEventForm { event = event, pickerModel = model.pickerModel, currentDate = model.currentDate, pickerDateText = model.pickerDateText }
+            eventForm 
+                { event = event
+                , pickerModel = model.pickerModel
+                , currentDate = model.currentDate
+                , pickerDateText = model.pickerDateText 
+                , onSave = CreateEvent
+                }
+
+        EditEventModel event ->
+            eventForm 
+                { event = event
+                , pickerModel = model.pickerModel
+                , currentDate = model.currentDate
+                , pickerDateText = model.pickerDateText 
+                , onSave = UpdateEvent
+                }
 
 
 nunito : Attribute msg
@@ -449,7 +527,7 @@ viewEvent event =
     column
         [ spacing 12
         , width fill
-        , paddingEach { left = 0, right = 12, top = 0, bottom = 0 }
+        , paddingXY 48 0
         ]
         [ row [ width fill ] [ titleEl, editLink ]
         , paragraph [ Font.italic, Font.size 12 ] [ text <| Date.format "EEEE, MMMM d YYYY" <| eventToDate event ]
@@ -738,8 +816,14 @@ card { lead, labelText, action } =
                 , onPress = onPress
                 }
 
-newEventForm : { event : Event, pickerModel : DatePicker.Model, currentDate : Date, pickerDateText : String } -> Element Msg
-newEventForm { event, pickerModel, currentDate, pickerDateText } =
+eventForm : 
+    { event : Event
+    , pickerModel : DatePicker.Model
+    , currentDate : Date
+    , pickerDateText : String 
+    , onSave : Msg
+    } -> Element Msg
+eventForm { event, pickerModel, currentDate, pickerDateText, onSave } =
     let
         defaultSettings =
             DatePicker.defaultSettings
@@ -755,22 +839,16 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
                 Exercise ->
                     ("Exercise", Colors.teal )
         
-        descriptionError : Maybe String
-        descriptionError =
-            event.errors
-                |> List.filter (\(fieldName, violation) -> fieldName == "description")
-                |> List.head
-                |> Maybe.map 
-                    (\(fieldName, violation) ->
-                        case violation of
-                            TextViolation { message } -> message
-                            HtmlViolation { message } -> message
-                    )
+        descriptionError = 
+            errorMessageForField event.errors "description"
+
+        dateError =
+            errorMessageForField event.errors "date"
     in
     column
         [ spacing 24
         , width fill
-        , paddingXY 24 0
+        , paddingXY 48 0
         ]
         [ DatePicker.input []
             { onChange = UpdateEventDate
@@ -781,6 +859,7 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
             , model = pickerModel
             , settings = datePickerSettings
             }
+        , formError dateError
         , Input.multiline []
             { onChange = UpdateEventDescription
             , text = event.description
@@ -788,15 +867,7 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
             , label = Input.labelAbove [] <| text "What's going on?"
             , spellcheck = False
             }
-        , case descriptionError of
-            Nothing ->
-                Element.none
-            Just message  ->
-                paragraph 
-                    [ Font.italic
-                    , Font.color Colors.darkRed
-                    ]
-                    [ text message ]
+        , formError descriptionError
         , row 
             [ spacing 12
             , width fill
@@ -821,11 +892,35 @@ newEventForm { event, pickerModel, currentDate, pickerDateText } =
                 , Background.color saveButtonColor
                 ]
                 { label = text <| "Save " ++ eventTypeStr
-                , onPress = Just CreateEvent
+                , onPress = Just onSave
                 }
             ]
         ]
 
+
+errorMessageForField : List (String, Violation) -> String -> Maybe String
+errorMessageForField errors field =
+    errors
+        |> List.filter (\(f, violation) -> f == field)
+        |> List.head
+        |> Maybe.map 
+            (\(fieldName, violation) ->
+                case violation of
+                    TextViolation { message } -> message
+                    HtmlViolation { message } -> message
+            )
+
+formError : Maybe String -> Element Msg
+formError maybeError =
+    case maybeError of
+      Nothing ->
+          Element.none
+      Just message  ->
+          paragraph 
+              [ Font.italic
+              , Font.color Colors.darkRed
+              ]
+              [ text message ]
 
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
@@ -861,6 +956,9 @@ init flags =
         pickerDateText =
             case widget of
                 NewEventModel event ->
+                    Date.format "Y-MM-dd" <| eventToDate event
+
+                EditEventModel event ->
                     Date.format "Y-MM-dd" <| eventToDate event
                 _ ->
                     ""
@@ -907,3 +1005,5 @@ widgetFlagToModel widget =
             NavBarModel context
         NewEventWidget event ->
             NewEventModel event
+        EditEventWidget event ->
+            EditEventModel event

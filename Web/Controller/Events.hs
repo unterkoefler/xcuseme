@@ -60,7 +60,7 @@ instance Controller EventsController where
                 Right event -> do
                     event <- event |> updateRecord
                     setSuccessMessage "Event updated"
-                    redirectTo EditEventAction { .. }
+                    render EditView { .. }
 
     action CreateEventAction = do
         let event = newRecord @Event

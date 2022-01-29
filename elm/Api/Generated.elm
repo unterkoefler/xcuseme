@@ -27,6 +27,7 @@ type Widget
     | EventCalendarWidget (List Event)
     | NavBarWidget NavBarContext
     | NewEventWidget Event
+    | EditEventWidget Event
 
 
 widgetEncoder : Widget -> Json.Encode.Value
@@ -52,6 +53,10 @@ widgetEncoder a =
             Json.Encode.object [ ("tag" , Json.Encode.string "NewEventWidget")
             , ("contents" , eventEncoder b) ]
 
+        EditEventWidget b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "EditEventWidget")
+            , ("contents" , eventEncoder b) ]
+
 
 widgetDecoder : Json.Decode.Decoder Widget
 widgetDecoder =
@@ -75,6 +80,10 @@ widgetDecoder =
 
         "NewEventWidget" ->
             Json.Decode.succeed NewEventWidget |>
+            Json.Decode.Pipeline.required "contents" eventDecoder
+
+        "EditEventWidget" ->
+            Json.Decode.succeed EditEventWidget |>
             Json.Decode.Pipeline.required "contents" eventDecoder
 
         _ ->

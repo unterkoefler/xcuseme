@@ -6,6 +6,7 @@ module Application.Helper.View (
     eventCalendarWidget,
     navBarWidget,
     newEventWidget,
+    editEventWidget,
     Widget(..),
     NavBarContext(..)
 ) where
@@ -26,6 +27,7 @@ data Widget
     | EventCalendarWidget [EventJSON]
     | NavBarWidget NavBarContext
     | NewEventWidget EventJSON
+    | EditEventWidget EventJSON
     deriving ( Generic
              , Aeson.ToJSON
              , SOP.Generic
@@ -81,6 +83,13 @@ newEventWidget event = [hsx|
 |]
     where
         eventData :: Widget = NewEventWidget $ eventToJSON event
+
+editEventWidget :: Event -> Html
+editEventWidget event = [hsx|
+    <div data-flags={encode eventData} class="elm"></div>
+|]
+    where
+        eventData :: Widget = EditEventWidget $ eventToJSON event
 
 eventListWidget :: [Event] -> Html
 eventListWidget events = [hsx|
