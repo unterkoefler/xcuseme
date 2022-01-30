@@ -9,6 +9,7 @@ import Web.View.Events.List
 import ValidationSupport.ValidateIsUniqueMultiColumn
 import Data.Time
 import Data.Time.Clock
+import Data.Aeson
 
 instance Controller EventsController where
     beforeAction = ensureIsUser
@@ -79,7 +80,7 @@ instance Controller EventsController where
 
         deleteRecord event
         setSuccessMessage "Event deleted"
-        redirectTo (EventsAction "cal")
+        renderJson (object [ "success" .= True ])
 
 buildEvent event = event
     |> set #userId currentUserId

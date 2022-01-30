@@ -56,6 +56,8 @@ type Msg
     | EventCreated (Result Http.Error Event)
     | UpdateEvent
     | EventUpdated (Result Http.Error Event)
+    | DeleteEvent Event
+    | EventDeleted (Result Http.Error ())
     | Logout
     | LoggedOut (Result Http.Error ())
 
@@ -157,6 +159,20 @@ update msg model =
                     ( { model | widget = EditEventModel event }
                     , Cmd.none
                     )
+
+        DeleteEvent event ->
+            ( model, deleteEvent event )
+
+        EventDeleted (Err e) ->
+            let
+                _ = Debug.log "DeleteEvent failed" e
+            in
+            ( model, Cmd.none )
+
+        EventDeleted (Ok ()) ->
+            ( model
+            , Browser.Navigation.load <| Url.Builder.absolute [] []
+            )
 
         Logout ->
             ( model
@@ -260,14 +276,24 @@ updateEvent event pickerDateText =
         , expect = Http.expectJson EventUpdated eventDecoder 
         }
 
+deleteEvent : Event -> Cmd Msg
+deleteEvent event =
+    ihpRequest
+        { method = "DELETE"
+        , headers = []
+        , url = Url.Builder.absolute [ "DeleteEvent" ] [ Url.Builder.string "eventId" event.id ]
+        , body = Http.emptyBody
+        , expect = Http.expectWhatever EventDeleted
+        }
+
 
 logout : Cmd Msg
 logout =
     ihpRequest
-        { method = "POST"
+        { method = "DELETE"
         , headers = []
         , url = Url.Builder.absolute [ "DeleteSession" ] []
-        , body = Http.stringBody "application/x-www-form-urlencoded" "_method=DELETE"
+        , body = Http.emptyBody
         , expect = Http.expectWhatever LoggedOut
         }
 
@@ -341,6 +367,7 @@ view model =
                 , currentDate = model.currentDate
                 , pickerDateText = model.pickerDateText 
                 , onSave = CreateEvent
+                , deleteButton = Element.none
                 }
 
         EditEventModel event ->
@@ -350,6 +377,7 @@ view model =
                 , currentDate = model.currentDate
                 , pickerDateText = model.pickerDateText 
                 , onSave = UpdateEvent
+                , deleteButton = deleteEventButton event
                 }
 
 
@@ -822,8 +850,9 @@ eventForm :
     , currentDate : Date
     , pickerDateText : String 
     , onSave : Msg
+    , deleteButton : Element Msg
     } -> Element Msg
-eventForm { event, pickerModel, currentDate, pickerDateText, onSave } =
+eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButton } =
     let
         defaultSettings =
             DatePicker.defaultSettings
@@ -850,15 +879,21 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave } =
         , width fill
         , paddingXY 48 0
         ]
-        [ DatePicker.input []
-            { onChange = UpdateEventDate
-            , selected = Just <| eventToDate event
-            , text = pickerDateText
-            , label = Input.labelLeft [] <| text "Date:"
-            , placeholder = Nothing
-            , model = pickerModel
-            , settings = datePickerSettings
-            }
+        [ row
+            [ spacing 24
+            , width fill
+            ]
+            [ DatePicker.input []
+                { onChange = UpdateEventDate
+                , selected = Just <| eventToDate event
+                , text = pickerDateText
+                , label = Input.labelLeft [] <| text "Date:"
+                , placeholder = Nothing
+                , model = pickerModel
+                , settings = datePickerSettings
+                }
+            , deleteButton
+            ]
         , formError dateError
         , Input.multiline []
             { onChange = UpdateEventDescription
@@ -897,6 +932,14 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave } =
             ]
         ]
 
+
+deleteEventButton : Event -> Element Msg
+deleteEventButton event =
+    Input.button
+        []
+        { label = text "delete"
+        , onPress = event |> DeleteEvent |> Just
+        }
 
 errorMessageForField : List (String, Violation) -> String -> Maybe String
 errorMessageForField errors field =
