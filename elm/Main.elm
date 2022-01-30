@@ -34,6 +34,7 @@ type alias Model =
     , widget : WidgetModel
     , pickerModel : DatePicker.Model
     , pickerDateText : String
+    , showLogEventModal : Bool
     }
 
 type WidgetModel
@@ -60,6 +61,7 @@ type Msg
     | EventDeleted (Result Http.Error ())
     | Logout
     | LoggedOut (Result Http.Error ())
+    | ToggleLogEventModal
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -187,6 +189,11 @@ update msg model =
 
         LoggedOut (Ok _) ->
             ( model, Browser.Navigation.load <| Url.Builder.absolute [ "NewSession" ] [] )
+
+        ToggleLogEventModal ->
+            ( { model | showLogEventModal = not model.showLogEventModal }
+            , Cmd.none
+            )
 
 updateEventDate : Model -> Event -> DatePicker.ChangeEvent -> Model
 updateEventDate model event change =
@@ -356,7 +363,13 @@ view model =
         EventCalendarModel events ->
             viewHome
                 { eventsView = eventCalendar 
-                    { events = events, currentDate = model.currentDate, selectedDate = model.selectedDate, monthIndex = model.monthIndex, useDarkMode = model.useDarkMode }
+                    { events = events
+                    , currentDate = model.currentDate
+                    , selectedDate = model.selectedDate
+                    , monthIndex = model.monthIndex
+                    , useDarkMode = model.useDarkMode 
+                    , showLogEventModal = model.showLogEventModal
+                    }
                 , innerMenu = changeViewLink "list" 
                 , selectedDate = model.selectedDate
                 }
@@ -462,26 +475,11 @@ logEventButton eventType selectedDate =
     -- TODO: disable if there is an existing event
     let
         eventTypeString =
-            case eventType of
-                Exercise ->
-                    "Exercise"
-                Excuse ->
-                    "Excuse"
+            eventType |> eventTypeToString |> firstCharToUpper
         url =
-            Url.Builder.absolute
-                [ "NewEvent" ]
-                [ Url.Builder.string "eventType" (eventTypeString)
-                , Url.Builder.int "year" <| Date.year selectedDate
-                , Url.Builder.int "month" <| Date.monthNumber selectedDate
-                , Url.Builder.int "day" <| Date.day selectedDate
-                ]
-
+            newEventUrl eventTypeString selectedDate
         color =
-            case eventType of
-                Exercise ->
-                    Colors.teal
-                Excuse ->
-                    Colors.red
+            eventTypeToColor eventType
     in
     link
         (fullWidthButtonAttrs color)
@@ -499,6 +497,48 @@ fullWidthButtonAttrs color =
     , padding 20
     , Font.center
     ]
+
+
+newEventUrl : String -> Date -> String
+newEventUrl eventTypeString selectedDate =
+    Url.Builder.absolute
+        [ "NewEvent" ]
+        [ Url.Builder.string "eventType" (eventTypeString)
+        , Url.Builder.int "year" <| Date.year selectedDate
+        , Url.Builder.int "month" <| Date.monthNumber selectedDate
+        , Url.Builder.int "day" <| Date.day selectedDate
+        ]
+
+eventTypeToColor : EventType -> Color
+eventTypeToColor eventType =
+   case eventType of
+       Exercise ->
+           Colors.teal
+       Excuse ->
+           Colors.red
+
+
+logEventButtonForModal : EventType -> Date -> List (Attribute Msg) -> Element Msg
+logEventButtonForModal eventType selectedDate borderAttrs =
+    let
+        eventTypeString =
+            eventType |> eventTypeToString |> firstCharToUpper
+        url =
+            newEventUrl eventTypeString selectedDate
+        color =
+            eventTypeToColor eventType
+    in
+    link
+        ([ Font.color color
+        , Background.color Colors.white
+        , width fill
+        , Font.center
+        , centerX
+        , paddingXY 0 12
+        ] ++ borderAttrs)
+        { label = text <| (++) "Log " eventTypeString
+        , url = url
+        }
 
 changeViewLink : String -> Element Msg
 changeViewLink mode =
@@ -529,13 +569,10 @@ changeViewLink mode =
 viewEvent : Event -> Element Msg
 viewEvent event =
     let
-        ( title, fontColor ) =
-            case event.eventType of
-                Excuse ->
-                    ( "Excuse Details", Colors.red )
-
-                Exercise ->
-                    ( "Exercise Details", Colors.teal )
+        title = 
+            event.eventType |> eventTypeToString |> firstCharToUpper
+        fontColor = 
+            event.eventType |> eventTypeToColor
         titleEl =
             el
                 [ Region.heading 2
@@ -562,10 +599,17 @@ viewEvent event =
         , paragraph [ Font.size 14 ] [ text event.description ]
         ]
 
-eventCalendar : { events: List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> Element Msg
+eventCalendar : 
+    { events: List Event
+    , currentDate : Date
+    , selectedDate : Date
+    ,monthIndex : Int
+    , useDarkMode : Bool 
+    , showLogEventModal : Bool
+    } -> Element Msg
 eventCalendar args =
     let
-        { monthIndex, currentDate, selectedDate, events } = args
+        { monthIndex, currentDate, selectedDate, events, showLogEventModal } = args
         viewingDate = 
             Date.add Date.Months monthIndex currentDate
         weeks =
@@ -582,20 +626,44 @@ eventCalendar args =
          , weekDayLabels
          ]
           ++ List.map (showWeek args) weeks
-          ++ [ calendarCard selectedEvent ]
+          ++ [ calendarCard selectedEvent showLogEventModal selectedDate ]
         )
 
-calendarCard : Maybe Event -> Element Msg
-calendarCard maybeEvent =
+calendarCard : Maybe Event -> Bool -> Date -> Element Msg
+calendarCard maybeEvent showLogEventModal selectedDate =
     case maybeEvent of
         Nothing ->
-            card 
-                { action = Button Nothing
-                , lead = icon add Colors.lightGrayForSvg 24
-                , labelText = "Nothing logged for selected day" 
-                }
+            let
+                modalAttrs : List (Attribute Msg)
+                modalAttrs =
+                    case showLogEventModal of
+                        True ->
+                            [ logEventModal selectedDate |> above ]
+
+                        False ->
+                            []
+
+            in
+            el
+                ([ width fill ] ++ modalAttrs)
+                <| card 
+                    { action = Button (Just ToggleLogEventModal)
+                    , lead = icon add Colors.lightGrayForSvg 24
+                    , labelText = "Nothing logged for selected day" 
+                    }
         Just e ->
             eventCard e
+
+logEventModal : Date -> Element Msg
+logEventModal selectedDate =
+    column
+        [ width fill ]
+        [ logEventButtonForModal Exercise selectedDate 
+            [ Border.widthEach { top = 0, bottom = 1, left = 0, right = 0 }
+            , Border.color Colors.gray 
+            ]
+        , logEventButtonForModal Excuse selectedDate []
+        ]
 
 calendarNavRow : { monthIndex : Int, viewingDate : Date } -> Element Msg
 calendarNavRow { monthIndex, viewingDate } =
@@ -626,7 +694,7 @@ weekDayLabels =
                 )
         )
 
-showWeek : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> List Calendar.CalendarDate -> Element Msg
+showWeek : { a | events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> List Calendar.CalendarDate -> Element Msg
 showWeek args days =
     row 
         [ spacing 6
@@ -634,7 +702,7 @@ showWeek args days =
         ]
     <| List.map (showDay args) days
 
-showDay : { events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> Calendar.CalendarDate -> Element Msg
+showDay : { a | events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> Calendar.CalendarDate -> Element Msg
 showDay { events, currentDate, selectedDate, useDarkMode } { dayDisplay, date } =
     let
         isFutureDate =
@@ -751,11 +819,7 @@ calendarCellBackgroundColor { currentDate, maybeEvent, date, selectedDate } =
             (False, Nothing) ->
                 Nothing
             (False, Just e) ->
-                case e.eventType of
-                    Exercise ->
-                        Just Colors.teal
-                    Excuse ->
-                        Just Colors.red
+                e.eventType |> eventTypeToColor |> Just
                     
 
 isEventOnDate : Date -> Event -> Bool
@@ -1013,6 +1077,7 @@ init flags =
       , monthIndex = 0
       , pickerModel = DatePicker.init
       , pickerDateText = pickerDateText
+      , showLogEventModal = False
       }
     , Date.today |> Task.perform ReceiveDate
     )
@@ -1050,3 +1115,10 @@ widgetFlagToModel widget =
             NewEventModel event
         EditEventWidget event ->
             EditEventModel event
+
+
+
+firstCharToUpper : String -> String
+firstCharToUpper s =
+    (s |> String.left 1 |> String.toUpper) ++
+    (s |> String.dropLeft 1)
