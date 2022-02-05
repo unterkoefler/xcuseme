@@ -86,4 +86,4 @@ buildEvent event = event
     |> set #userId currentUserId
     |> fill @["eventType","description","date"]
     |> validateField #description nonEmpty
-    |> validateIsUniqueTwoColumn #userId #date
+    |> validateIsUniqueTwoColumn #userId #date (Just "non_unique_date")

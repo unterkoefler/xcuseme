@@ -1102,12 +1102,39 @@ formError maybeError =
     case maybeError of
       Nothing ->
           Element.none
+      
       Just message  ->
-          paragraph 
-              [ Font.italic
-              , Font.color Colors.darkRed
-              ]
-              [ text message ]
+          if String.startsWith "non_unique_date" message then
+            nonUniqueDateMessage message
+          else
+            paragraph 
+                [ Font.italic
+                , Font.color Colors.darkRed
+                ]
+                [ text message ]
+
+nonUniqueDateMessage : String -> Element Msg
+nonUniqueDateMessage message =
+    let
+        eventId : String
+        eventId =
+            message 
+                |> String.dropLeft (String.length "non_unique_date:")
+    in
+    paragraph
+        [ Font.italic
+        , Font.color Colors.darkRed
+        ]
+        [ text "You have already logged something for this date. Do you want to edit it instead? "
+        , link
+            [ Font.color Colors.blue
+            , Font.underline
+            ]
+            { url = Url.Builder.absolute [ "EditEvent" ] [ Url.Builder.string "eventId" eventId]
+            , label = text "Edit existing event"
+            }
+        ]
+
 
 viewFlashMessage : FlashMessage -> Element Msg
 viewFlashMessage { messageType, message } =

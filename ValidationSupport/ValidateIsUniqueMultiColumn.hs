@@ -32,17 +32,19 @@ validateIsUniqueTwoColumn :: forall field1 field2 model savedModel field1Value f
         , HasField "id" model modelId
         , savedModelId ~ modelId
         , Eq modelId
+        , Show modelId
         , GetModelByTableName (GetTableName savedModel) ~ savedModel
         , Table savedModel
-    ) => Proxy field1 -> Proxy field2 -> model -> IO model
-validateIsUniqueTwoColumn field1Proxy field2Proxy model = do
+    ) => Proxy field1 -> Proxy field2 -> Maybe Text -> model -> IO model
+validateIsUniqueTwoColumn field1Proxy field2Proxy customError model = do
     let value1 = getField @field1 model
         value2 = getField @field2 model
+        errorMessage = maybe "This is already in use" id customError
     result <- query @savedModel
             |> filterWhere (field1Proxy, value1)
             |> filterWhere (field2Proxy, value2)
             |> fetchOneOrNothing
     case result of
         Just value | not $ (getField @"id" model) == (getField @"id" value) -> do
-            pure (attachValidatorResult field2Proxy (Failure "This is already in use") model)
+            pure (attachValidatorResult field2Proxy (Failure (errorMessage ++ ":" ++ (show $ getField @"id" value))) model)
         _ -> pure (attachValidatorResult field2Proxy Success model)
