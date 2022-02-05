@@ -35,7 +35,18 @@ type alias Model =
     , pickerModel : DatePicker.Model
     , pickerDateText : String
     , showLogEventModal : Bool
+    , flashMessage : Maybe FlashMessage
     }
+
+type alias FlashMessage =
+    { messageType : FlashMessageType
+    , message : String
+    }
+
+type FlashMessageType
+    = Success
+    | Error
+    | Info
 
 type WidgetModel
     = EventModel Event
@@ -62,6 +73,7 @@ type Msg
     | Logout
     | LoggedOut (Result Http.Error ())
     | ToggleLogEventModal
+    | SetFlashMessage (Maybe FlashMessage)
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -84,24 +96,30 @@ update msg model =
             )
 
         DateSelected date ->
-            ( { model | selectedDate = date }
+            ( { model | selectedDate = date, flashMessage = Nothing }
             , Cmd.none
             )
 
         UpdateMonthIndex idx ->
-            ( { model | monthIndex = idx }
+            ( { model | monthIndex = idx, flashMessage = Nothing }
             , Cmd.none
             )
 
         UpdateEventDescription description ->
             case model.widget of
                 NewEventModel event ->
-                    ( { model | widget = NewEventModel { event | description = description } }
+                    ( { model 
+                        | widget = NewEventModel { event | description = description } 
+                        , flashMessage = Nothing
+                    }
                     , Cmd.none
                     )
 
                 EditEventModel event ->
-                    ( { model | widget = EditEventModel { event | description = description} }
+                    ( { model 
+                        | widget = EditEventModel { event | description = description} 
+                        , flashMessage = Nothing
+                    }
                     , Cmd.none
                     )
 
@@ -119,15 +137,19 @@ update msg model =
         CreateEvent ->
             case model.widget of
                 NewEventModel event ->
-                    ( model, createEvent event model.pickerDateText )
+                    ( { model | flashMessage = Nothing }
+                    , createEvent event model.pickerDateText 
+                    )
                 _ ->
                     ( model, Cmd.none )
 
         EventCreated (Err e) ->
             let
-                _ = Debug.log "CreateEvent failed" e
+                errorMsg = httpErrorToString e
             in
-            ( model, Cmd.none )
+            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            , Cmd.none 
+            )
 
         EventCreated (Ok event) ->
             case event.errors of
@@ -147,9 +169,11 @@ update msg model =
 
         EventUpdated (Err e) ->
             let
-                _ = Debug.log "UpdateEvent failed" e
+                errorMsg = httpErrorToString e
             in
-            ( model, Cmd.none )
+            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            , Cmd.none 
+            )
 
         EventUpdated (Ok event) ->
             case event.errors of
@@ -163,13 +187,17 @@ update msg model =
                     )
 
         DeleteEvent event ->
-            ( model, deleteEvent event )
+            ( { model | flashMessage = Nothing }
+            , deleteEvent event 
+            )
 
         EventDeleted (Err e) ->
             let
-                _ = Debug.log "DeleteEvent failed" e
+                errorMsg = httpErrorToString e
             in
-            ( model, Cmd.none )
+            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            , Cmd.none 
+            )
 
         EventDeleted (Ok ()) ->
             ( model
@@ -183,17 +211,43 @@ update msg model =
 
         LoggedOut (Err e) ->
             let
-                _ = Debug.log "Logout failed" e
+                errorMsg = httpErrorToString e
             in
-            ( model, Cmd.none )
+            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            , Cmd.none 
+            )
 
         LoggedOut (Ok _) ->
             ( model, Browser.Navigation.load <| Url.Builder.absolute [ "NewSession" ] [] )
 
         ToggleLogEventModal ->
-            ( { model | showLogEventModal = not model.showLogEventModal }
+            ( { model | showLogEventModal = not model.showLogEventModal, flashMessage = Nothing }
             , Cmd.none
             )
+
+        SetFlashMessage fm ->
+            ( { model | flashMessage = fm }
+            , Cmd.none
+            )
+
+
+httpErrorToString : Http.Error -> String
+httpErrorToString e =
+    case e of
+        Http.BadBody s ->
+            "Error: BadBody " ++ s
+
+        Http.Timeout ->
+            "Error: Request timed out."
+
+        Http.BadUrl s ->
+            "Error: BadUrl " ++ s
+
+        Http.NetworkError ->
+            "Error: Internet broke"
+
+        Http.BadStatus i ->
+            "Error: BadStatus " ++ (String.fromInt i)
 
 updateEventDate : Model -> Event -> DatePicker.ChangeEvent -> Model
 updateEventDate model event change =
@@ -359,6 +413,8 @@ view model =
                 { eventsView = eventCards events
                 , innerMenu = changeViewLink "cal" 
                 , selectedDate = model.selectedDate
+                , events = events
+                , flashMessage = model.flashMessage
                 }
         EventCalendarModel events ->
             viewHome
@@ -372,6 +428,8 @@ view model =
                     }
                 , innerMenu = changeViewLink "list" 
                 , selectedDate = model.selectedDate
+                , events = events
+                , flashMessage = model.flashMessage
                 }
         NewEventModel event ->
             eventForm 
@@ -401,17 +459,24 @@ nunito =
         , Font.serif
         ]
 
-viewHome : { eventsView : Element Msg, innerMenu : Element Msg, selectedDate : Date } -> Element Msg
-viewHome { eventsView, innerMenu, selectedDate } =
+viewHome : 
+    { eventsView : Element Msg
+    , innerMenu : Element Msg
+    , selectedDate : Date 
+    , events : List Event
+    , flashMessage : Maybe FlashMessage
+    } -> Element Msg
+viewHome { eventsView, innerMenu, selectedDate, events, flashMessage } =
     column
         [ spacing 24
         , width fill
         , height fill
         , paddingXY 48 0
         ]
-        [ column [ spacing 12, width fill ]
-            [ logEventButton Exercise selectedDate
-            , logEventButton Excuse selectedDate
+        [ flashMessage |> Maybe.map viewFlashMessage |> Maybe.withDefault Element.none
+        , column [ spacing 12, width fill ]
+            [ logEventButton Exercise selectedDate events
+            , logEventButton Excuse selectedDate events
             ]
         , innerMenu
         , eventsView
@@ -470,8 +535,8 @@ subHeader =
         
             
 
-logEventButton : EventType -> Date -> Element Msg
-logEventButton eventType selectedDate =
+logEventButton : EventType -> Date -> List Event -> Element Msg
+logEventButton eventType selectedDate events =
     -- TODO: disable if there is an existing event
     let
         eventTypeString =
@@ -480,12 +545,27 @@ logEventButton eventType selectedDate =
             newEventUrl eventTypeString selectedDate
         color =
             eventTypeToColor eventType
+
+        event : Maybe Event
+        event =
+            eventForDay events selectedDate
     in
-    link
-        (fullWidthButtonAttrs color)
-        { label = text <| (++) "Log " eventTypeString
-        , url = url
-        }
+    case event of
+        Nothing ->
+            link
+                (fullWidthButtonAttrs color)
+                { label = text <| (++) "Log " eventTypeString
+                , url = url
+                }
+        Just _ ->
+            Input.button
+                (fullWidthButtonAttrs Colors.lightGray)
+                { label = text <| (++) "Log " eventTypeString
+                , onPress = 
+                    { message = "You can log only one exercise or excuse per day"
+                    , messageType = Info
+                    } |> Just |> SetFlashMessage |> Just 
+                }
 
 fullWidthButtonAttrs : Color -> List (Attribute Msg)
 fullWidthButtonAttrs color =
@@ -1029,6 +1109,29 @@ formError maybeError =
               ]
               [ text message ]
 
+viewFlashMessage : FlashMessage -> Element Msg
+viewFlashMessage { messageType, message } =
+    let
+        bgColor : Color
+        bgColor =
+            case messageType of
+                Success ->
+                    Colors.success
+
+                Info ->
+                    Colors.info
+
+                Error ->
+                    Colors.error
+    in
+    paragraph
+        [ Background.color bgColor
+        , Font.color Colors.white
+        , padding 6
+        ]
+        [ text message
+        ]
+
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
     Date.fromCalendarDate
@@ -1078,6 +1181,7 @@ init flags =
       , pickerModel = DatePicker.init
       , pickerDateText = pickerDateText
       , showLogEventModal = False
+      , flashMessage = Nothing
       }
     , Date.today |> Task.perform ReceiveDate
     )

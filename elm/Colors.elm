@@ -48,3 +48,13 @@ indigo =
 
 indigoLighter =
     rgb255 187 194 229
+
+
+success =
+    rgb255 50 230 80
+
+info =
+    rgb255 260 140 64
+
+error =
+    rgb255 140 100 100
