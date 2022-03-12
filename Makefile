@@ -23,5 +23,5 @@ JS_FILES += static/elm/index.js
 include ${IHP}/Makefile.dist
 
 static/elm/index.js:
-		NODE_ENV=production npm ci
-		NODE_ENV=production npm run build
+		NODE_ENV=production yarn install --frozen-lockfile
+		NODE_ENV=production node build.js

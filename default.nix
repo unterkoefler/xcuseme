@@ -16,7 +16,9 @@ let
         ];
         otherDeps = p: with p; [
             # Native dependencies, e.g. imagemagick
-            nodejs elmPackages.elm
+            elmPackages.elm
+            yarn
+            nodejs-16_x
         ];
         projectPath = ./.;
     };

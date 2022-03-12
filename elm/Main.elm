@@ -1227,8 +1227,6 @@ decodeExtra flags =
         Ok v ->
             { useDarkMode = v }
         Err error ->
-            let _ = Debug.log "decodeExtra error" error
-            in
             { useDarkMode = False }
 
 widgetFlagToModel : Widget -> WidgetModel
