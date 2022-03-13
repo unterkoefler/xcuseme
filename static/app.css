@@ -1,13 +1,3 @@
-body {
-    background-color: white;
-}
-
-@media (prefers-color-scheme: dark) {
-  body {
-      background-color: black;
-  }
-}
-
 .navBar {
     margin-bottom: 24px;
 }
