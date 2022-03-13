@@ -17,6 +17,7 @@ instance Controller EventsController where
     action (EventsAction mode) = do
         events <- query @Event
             |> filterWhere (#userId, currentUserId)
+            |> orderByDesc #date
             |> fetch
         case toLower mode of
             "list" ->
