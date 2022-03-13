@@ -9,11 +9,17 @@ red =
 redForSvg =
     Color.rgb255 229 115 115
 
+redLighter =
+    rgb255 239 154 154
+
 darkRed =
     rgb255 229 50 10
 
 teal =
     rgb255 77 182 172
+
+tealLighter =
+    rgb255 128 203 196
 
 tealForSvg =
     Color.rgb255 77 189 172

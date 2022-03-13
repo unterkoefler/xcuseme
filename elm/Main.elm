@@ -570,6 +570,13 @@ eventTypeToColor eventType =
        Excuse ->
            Colors.red
 
+eventTypeToLighterColor : EventType -> Color
+eventTypeToLighterColor eventType =
+   case eventType of
+       Exercise ->
+           Colors.tealLighter
+       Excuse ->
+           Colors.redLighter
 
 logEventButtonForModal : EventType -> Date -> List (Attribute Msg) -> Element Msg
 logEventButtonForModal eventType selectedDate borderAttrs =
@@ -658,7 +665,7 @@ eventCalendar :
     { events: List Event
     , currentDate : Date
     , selectedDate : Date
-    ,monthIndex : Int
+    , monthIndex : Int
     , useDarkMode : Bool 
     , showLogEventModal : Bool
     } -> Element Msg
@@ -673,8 +680,7 @@ eventCalendar args =
             eventForDay events selectedDate
     in
     column
-        [ spacing 12
-        , width fill
+        [ width fill
         ]
     <|
         ([ calendarNavRow { monthIndex = monthIndex, viewingDate = viewingDate }
@@ -693,7 +699,7 @@ calendarCard maybeEvent showLogEventModal selectedDate =
                 modalAttrs =
                     case showLogEventModal of
                         True ->
-                            [ logEventModal selectedDate |> above ]
+                            [ logEventModal selectedDate |> below ]
 
                         False ->
                             []
@@ -733,8 +739,8 @@ calendarNavRow { monthIndex, viewingDate } =
                 { label = icon chevron_left Colors.blackForSvg 24 
                 , onPress = Just << UpdateMonthIndex <| monthIndex - 1 
                 }
-            , el [ centerX, paddingEach { left = 36, right = 0, top = 0, bottom = 0 } ] <| text <| Date.format "MMMM y" <| viewingDate
-            , Input.button [ alignRight, paddingEach { left = 0, right = 12, bottom = 0, top = 0 }, width (px 36), Font.size 12 ] { label = text "today", onPress = Just << UpdateMonthIndex <| 0 }
+            , el [ centerX, paddingEach { left = 48, right = 0, top = 0, bottom = 0 } ] <| text <| Date.format "MMMM y" <| viewingDate
+            , Input.button [ alignRight, paddingEach { left = 0, right = 12, bottom = 0, top = 0 }, width (px 48), Font.size 12 ] { label = text "today", onPress = Just << UpdateMonthIndex <| 0 }
             , Input.button [ alignRight ] 
                 { label = icon chevron_right Colors.blackForSvg 24
                 , onPress = Just << UpdateMonthIndex <| monthIndex + 1 }
@@ -745,17 +751,17 @@ weekDayLabels : Element Msg
 weekDayLabels =
     let
         weekDays =
-            [ "S", "M", "T", "W", "R", "F", "S" ]
+            [ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat" ]
     in
     row
-        [ spacing 6, width fill ]
+        [ width fill, paddingEach { top = 12, bottom = 0, left = 0, right = 0 } ]
         (weekDays
             |> List.map
                 (\lbl ->
                     calendarCell
                         { bgColor = Nothing
                         , shrinkHeight = True
-                        , innerContent = el [ Font.size 14, Font.center, width fill ] <| text lbl
+                        , innerContent = el [ Font.size 12, Font.center, width fill ] <| text lbl
                         }
                 )
         )
@@ -763,8 +769,7 @@ weekDayLabels =
 showWeek : { a | events : List Event, currentDate : Date, selectedDate : Date, monthIndex : Int, useDarkMode : Bool } -> List Calendar.CalendarDate -> Element Msg
 showWeek args days =
     row 
-        [ spacing 6
-        , width fill
+        [ width fill
         ]
     <| List.map (showDay args) days
 
@@ -773,17 +778,6 @@ showDay { events, currentDate, selectedDate, useDarkMode } { dayDisplay, date } 
     let
         isFutureDate =
             Date.compare currentDate date == LT
-
-        fontColor =
-            case ( isFutureDate, dayDisplay ) of
-                (True, _) ->
-                    Colors.mediumGray
-
-                ( _, "  " ) ->
-                    if useDarkMode then Colors.lightGray else Colors.gray
-
-                _ ->
-                    if useDarkMode then Colors.white else Colors.black
 
         maybeEvent =
             eventForDay events date
@@ -794,12 +788,13 @@ showDay { events, currentDate, selectedDate, useDarkMode } { dayDisplay, date } 
             else
                 Just <| DateSelected date
 
-        backgroundColor =
-            calendarCellBackgroundColor 
+        { backgroundColor, fontColor } =
+            calendarCellColors 
                 { currentDate = currentDate
                 , selectedDate = selectedDate
                 , maybeEvent =   maybeEvent
                 , date =   date
+                , dayDisplay = dayDisplay
                 }
 
 
@@ -830,7 +825,7 @@ calendarCell { bgColor, shrinkHeight, innerContent } =
     -- TODO -> scale with screen size
     let
         fontSize = 12
-        bgSize = 16
+        bgSize = 36
         bgAttrs =
             case bgColor of
                 Just col ->
@@ -855,7 +850,6 @@ calendarCell { bgColor, shrinkHeight, innerContent } =
         , centerX
         , Font.center
         , Font.size fontSize
-        , paddingXY 6 0
         ]
     <|
         el
@@ -874,18 +868,47 @@ eventForDay events date =
         event :: others ->
             Just event
 
-calendarCellBackgroundColor : { currentDate : Date, maybeEvent : Maybe Event, date :  Date, selectedDate : Date } -> Maybe Color
-calendarCellBackgroundColor { currentDate, maybeEvent, date, selectedDate } =
+calendarCellColors : 
+    { currentDate : Date
+    , maybeEvent : Maybe Event
+    , date :  Date
+    , selectedDate : Date 
+    , dayDisplay : String
+    } -> { backgroundColor : Maybe Color, fontColor : Color }
+calendarCellColors { currentDate, maybeEvent, date, selectedDate, dayDisplay } =
+    let
+        isFutureDate =
+            Date.compare currentDate date == LT
+
+        fontColorDefault =
+            case ( isFutureDate, dayDisplay ) of
+                (True, _) ->
+                    Colors.mediumGray
+
+                ( _, "  " ) ->
+                    Colors.gray
+
+                _ ->
+                    Colors.black
+    in
     if selectedDate == date then
-        Just Colors.blue
+        { backgroundColor = Just Colors.blue
+        , fontColor = Colors.white
+        }
     else
         case (currentDate == date, maybeEvent) of
             (True, _) ->
-                Just Colors.blueLighter
+                { backgroundColor = Just Colors.blueLighter
+                , fontColor = Colors.white
+                }
             (False, Nothing) ->
-                Nothing
+                { backgroundColor = Nothing
+                , fontColor = fontColorDefault
+                }
             (False, Just e) ->
-                e.eventType |> eventTypeToColor |> Just
+                { backgroundColor = e.eventType |> eventTypeToLighterColor |> Just
+                , fontColor = fontColorDefault
+                }
                     
 
 isEventOnDate : Date -> Event -> Bool
