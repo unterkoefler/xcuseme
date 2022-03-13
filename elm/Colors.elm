@@ -39,6 +39,9 @@ mediumGray =
 black =
     rgb255 0 0 0
 
+blackForSvg =
+    Color.rgb255 0 0 0
+
 white =
     rgb255 255 255 255
 

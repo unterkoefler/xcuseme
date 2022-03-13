@@ -21,6 +21,7 @@ import Html.Attributes
 import Http
 import Material.Icons.Maps exposing (directions_run, hotel)
 import Material.Icons.Content exposing (add)
+import Material.Icons.Navigation exposing (chevron_left, chevron_right)
 import Svg exposing (Svg)
 import Task
 import Time
@@ -400,10 +401,9 @@ viewHome { eventsView, innerMenu, selectedDate, events, flashMessage } =
         [ spacing 24
         , width fill
         , height fill
-        , paddingXY 48 0
         ]
         [ flashMessage |> Maybe.map viewFlashMessage |> Maybe.withDefault Element.none
-        , column [ spacing 12, width fill ]
+        , column [ spacing 12, width fill, paddingXY 24 0 ]
             [ logEventButton Exercise selectedDate events
             , logEventButton Excuse selectedDate events
             ]
@@ -478,7 +478,7 @@ menuOptions loggedIn =
         , paddingXY 12 0
         ]
     <|
-        borderBetween
+        borderBetween Colors.white
            [ link menuItemAttrs { url = Urls.root, label = text "About"}
            , logoutButton
            ] 
@@ -490,8 +490,8 @@ menuItemAttrs =
     , width fill
     ]
 
-borderBetween : List (Element msg) -> List (Element msg)
-borderBetween elements =
+borderBetween : Color -> List (Element msg) -> List (Element msg)
+borderBetween color elements =
     case elements of
         [] ->
             []
@@ -500,9 +500,13 @@ borderBetween elements =
             [ element ]
 
         element :: rest ->
-            el [ Border.widthEach { top = 0, left = 0, right = 0, bottom = 1 }, width fill ]
+            el 
+                [ Border.widthEach { top = 0, left = 0, right = 0, bottom = 1 }
+                , width fill 
+                , Border.color color 
+                ]
                 element
-                :: borderBetween rest
+                :: borderBetween color rest
         
 
 logEventButton : EventType -> Date -> List Event -> Element Msg
@@ -598,7 +602,9 @@ changeViewLink mode =
             "view " ++ mode
     in
     row 
-        [ width fill ]
+        [ width fill
+        , paddingEach { left = 0, right = 24, top = 0, bottom = 0 }
+        ]
         [ link
             [ alignRight
             , htmlAttribute <| Html.Attributes.attribute "data-turbolinks-preload" "false"
@@ -694,14 +700,15 @@ calendarCard maybeEvent showLogEventModal selectedDate =
 
             in
             el
-                ([ width fill ] ++ modalAttrs)
+                ([ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] ++ modalAttrs)
                 <| card 
                     { action = Button (Just ToggleLogEventModal)
                     , lead = icon add Colors.lightGrayForSvg 24
                     , labelText = "Nothing logged for selected day" 
                     }
         Just e ->
-            eventCard e
+            el [ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] 
+                <| eventCard e
 
 logEventModal : Date -> Element Msg
 logEventModal selectedDate =
@@ -716,11 +723,21 @@ logEventModal selectedDate =
 
 calendarNavRow : { monthIndex : Int, viewingDate : Date } -> Element Msg
 calendarNavRow { monthIndex, viewingDate } =
-    row [ width fill ]
-            [ Input.button [ alignLeft ] { label = text "prev", onPress = Just << UpdateMonthIndex <| monthIndex - 1 }
-            , el [ centerX ] <| text <| Date.format "MMMM y" <| viewingDate
-            , Input.button [ alignRight, paddingXY 12 0 ] { label = text "today", onPress = Just << UpdateMonthIndex <| 0 }
-            , Input.button [ alignRight ] { label = text "next", onPress = Just << UpdateMonthIndex <| monthIndex + 1 }
+    row 
+        [ width fill
+        , Background.color Colors.indigo
+        , Font.color Colors.white 
+        , paddingXY 6 6
+        ]
+            [ Input.button [ alignLeft ] 
+                { label = icon chevron_left Colors.blackForSvg 24 
+                , onPress = Just << UpdateMonthIndex <| monthIndex - 1 
+                }
+            , el [ centerX, paddingEach { left = 36, right = 0, top = 0, bottom = 0 } ] <| text <| Date.format "MMMM y" <| viewingDate
+            , Input.button [ alignRight, paddingEach { left = 0, right = 12, bottom = 0, top = 0 }, width (px 36), Font.size 12 ] { label = text "today", onPress = Just << UpdateMonthIndex <| 0 }
+            , Input.button [ alignRight ] 
+                { label = icon chevron_right Colors.blackForSvg 24
+                , onPress = Just << UpdateMonthIndex <| monthIndex + 1 }
             ]
 
 
@@ -889,7 +906,7 @@ eventCards events =
                 , height <| minimum 400 <| fill
                 ]
             <|
-                List.map eventCard events
+                borderBetween Colors.lightGray <| List.map eventCard events
 
 eventCard : Event -> Element Msg
 eventCard event =
@@ -933,9 +950,7 @@ card { lead, labelText, action } =
         label =
             row
                 [ spacing 12
-                , Border.widthEach { top = 1, bottom = 1, left = 0, right = 0 }
-                , Border.color Colors.lightGray
-                , paddingXY 0 6
+                , paddingXY 12 6
                 , width fill
                 , Font.size 12
                 ]
