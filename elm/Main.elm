@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), eventDecoder)
+import Api
 import Json.Decode
-import Json.Encode
 import Browser
 import Browser.Navigation
 import Calendar
@@ -24,7 +24,7 @@ import Material.Icons.Content exposing (add)
 import Svg exposing (Svg)
 import Task
 import Time
-import Url.Builder
+import Urls
 
 type alias Model =
     { currentDate : Date
@@ -138,7 +138,8 @@ update msg model =
             case model.widget of
                 NewEventModel event ->
                     ( { model | flashMessage = Nothing }
-                    , createEvent event model.pickerDateText 
+                    , Api.createEvent { event = event, dateText =model.pickerDateText }
+                            EventCreated
                     )
                 _ ->
                     ( model, Cmd.none )
@@ -154,7 +155,7 @@ update msg model =
         EventCreated (Ok event) ->
             case event.errors of
                 [] ->
-                    ( model, Browser.Navigation.load <| Url.Builder.absolute [] [] )
+                    ( model, Browser.Navigation.load Urls.root )
 
                 _ ->
                     ( { model | widget = NewEventModel event }
@@ -163,7 +164,7 @@ update msg model =
         UpdateEvent ->
             case model.widget of
                 EditEventModel event ->
-                    ( model, updateEvent event model.pickerDateText )
+                    ( model, Api.updateEvent { event = event, dateText =  model.pickerDateText } EventUpdated )
                 _ ->
                     ( model, Cmd.none )
 
@@ -179,7 +180,7 @@ update msg model =
             case event.errors of
                 [] ->
                     ( model
-                    , Browser.Navigation.load <| Url.Builder.absolute [ "ShowEvent" ] [ Url.Builder.string "eventId" event.id ] )
+                    , Browser.Navigation.load <| Urls.showEvent event.id )
 
                 _ ->
                     ( { model | widget = EditEventModel event }
@@ -188,7 +189,7 @@ update msg model =
 
         DeleteEvent event ->
             ( { model | flashMessage = Nothing }
-            , deleteEvent event 
+            , Api.deleteEvent event EventDeleted
             )
 
         EventDeleted (Err e) ->
@@ -201,12 +202,12 @@ update msg model =
 
         EventDeleted (Ok ()) ->
             ( model
-            , Browser.Navigation.load <| Url.Builder.absolute [] []
+            , Browser.Navigation.load Urls.root
             )
 
         Logout ->
             ( model
-            , logout
+            , Api.logout LoggedOut
             )
 
         LoggedOut (Err e) ->
@@ -218,7 +219,7 @@ update msg model =
             )
 
         LoggedOut (Ok _) ->
-            ( model, Browser.Navigation.load <| Url.Builder.absolute [ "NewSession" ] [] )
+            ( model, Browser.Navigation.load Urls.newSession )
 
         ToggleLogEventModal ->
             ( { model | showLogEventModal = not model.showLogEventModal, flashMessage = Nothing }
@@ -298,85 +299,6 @@ updateEventDateAndClosePicker model event date =
         , pickerDateText = Date.format "Y-MM-dd" date
     }
 
-createEvent : Event -> String -> Cmd Msg
-createEvent event pickerDateText =
-    ihpRequest
-        { method = "POST"
-        , headers = []
-        , url = Url.Builder.absolute [ "CreateEvent" ] []
-        , body = Http.jsonBody <|
-            Json.Encode.object 
-                [ ( "eventType", event.eventType |> eventTypeToString |> Json.Encode.string )
-                , ( "date", Json.Encode.string pickerDateText )
-                , ( "description", Json.Encode.string event.description )
-                ]
-        , expect = Http.expectJson EventCreated eventDecoder 
-        }
-
-eventTypeToString : EventType -> String
-eventTypeToString eventType =
-    case eventType of
-        Exercise ->
-            "exercise"
-        Excuse ->
-            "excuse"
-
-
-updateEvent : Event -> String -> Cmd Msg
-updateEvent event pickerDateText =
-    ihpRequest
-        { method = "POST"
-        , headers = []
-        , url = Url.Builder.absolute [ "UpdateEvent" ] [ Url.Builder.string "eventId" event.id ]
-        , body = Http.jsonBody <|
-            Json.Encode.object 
-                [ ( "eventType", event.eventType |> eventTypeToString |> Json.Encode.string )
-                , ( "date", Json.Encode.string pickerDateText )
-                , ( "description", Json.Encode.string event.description )
-                ]
-        , expect = Http.expectJson EventUpdated eventDecoder 
-        }
-
-deleteEvent : Event -> Cmd Msg
-deleteEvent event =
-    ihpRequest
-        { method = "DELETE"
-        , headers = []
-        , url = Url.Builder.absolute [ "DeleteEvent" ] [ Url.Builder.string "eventId" event.id ]
-        , body = Http.emptyBody
-        , expect = Http.expectWhatever EventDeleted
-        }
-
-
-logout : Cmd Msg
-logout =
-    ihpRequest
-        { method = "DELETE"
-        , headers = []
-        , url = Url.Builder.absolute [ "DeleteSession" ] []
-        , body = Http.emptyBody
-        , expect = Http.expectWhatever LoggedOut
-        }
-
-ihpRequest :
-    { method : String
-    , headers : List Http.Header
-    , url : String
-    , body : Http.Body
-    , expect : Http.Expect msg
-    }
-    -> Cmd msg
-ihpRequest { method, headers, url, body, expect } =
-    Http.request
-        { method = method
-        , headers =
-            [ Http.header "Accept" "application/json" ] ++ headers
-        , url = url
-        , body = body
-        , expect = expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -516,7 +438,7 @@ header { loggedIn } =
                 , paddingEach { left = 0, right = 12, top = 0, bottom = 0 }
                 ]
                 { label = el [ Font.color Colors.white  ] <| text "XcuseMe"
-                , url = Url.Builder.absolute [] []
+                , url = Urls.root
                 }
             , row [ alignRight ] buttons
             ]
@@ -542,7 +464,7 @@ logEventButton eventType selectedDate events =
         eventTypeString =
             eventType |> eventTypeToString |> firstCharToUpper
         url =
-            newEventUrl eventTypeString selectedDate
+            Urls.newEvent { eventType = eventTypeString, date = selectedDate }
         color =
             eventTypeToColor eventType
 
@@ -567,6 +489,14 @@ logEventButton eventType selectedDate events =
                     } |> Just |> SetFlashMessage |> Just 
                 }
 
+eventTypeToString : EventType -> String
+eventTypeToString eventType =
+    case eventType of
+        Exercise ->
+            "exercise"
+        Excuse ->
+            "excuse"
+
 fullWidthButtonAttrs : Color -> List (Attribute Msg)
 fullWidthButtonAttrs color =
     [ Border.rounded 12
@@ -579,15 +509,6 @@ fullWidthButtonAttrs color =
     ]
 
 
-newEventUrl : String -> Date -> String
-newEventUrl eventTypeString selectedDate =
-    Url.Builder.absolute
-        [ "NewEvent" ]
-        [ Url.Builder.string "eventType" (eventTypeString)
-        , Url.Builder.int "year" <| Date.year selectedDate
-        , Url.Builder.int "month" <| Date.monthNumber selectedDate
-        , Url.Builder.int "day" <| Date.day selectedDate
-        ]
 
 eventTypeToColor : EventType -> Color
 eventTypeToColor eventType =
@@ -604,7 +525,7 @@ logEventButtonForModal eventType selectedDate borderAttrs =
         eventTypeString =
             eventType |> eventTypeToString |> firstCharToUpper
         url =
-            newEventUrl eventTypeString selectedDate
+            Urls.newEvent { eventType = eventTypeString, date = selectedDate }
         color =
             eventTypeToColor eventType
     in
@@ -624,7 +545,7 @@ changeViewLink : String -> Element Msg
 changeViewLink mode =
     let
         url = 
-            Url.Builder.absolute [ "Events" ] [ Url.Builder.string "mode" mode ]
+            Urls.events mode
         lbl = 
             "view " ++ mode
     in
@@ -666,7 +587,7 @@ viewEvent event =
                 [ alignRight
                 ]
                 { label = el [] <| text "edit"
-                , url = Url.Builder.absolute [ "EditEvent" ] [ Url.Builder.string "eventId" event.id ]
+                , url = Urls.editEvent event.id
                 } 
     in
     column
@@ -931,7 +852,7 @@ eventCard event =
                 ++ event.description
         url : String 
         url = 
-            Url.Builder.absolute [ "ShowEvent" ] [ Url.Builder.string "eventId" event.id ]
+            Urls.showEvent event.id
 
         (iconF, iconColor) =
             case event.eventType of
@@ -1060,7 +981,7 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
                 , Font.color Colors.darkRed
                 ]
                 { label = text "Cancel"
-                , url = Url.Builder.absolute [] []
+                , url = Urls.root
                 }
             , Input.button
                 [ alignRight
@@ -1130,7 +1051,7 @@ nonUniqueDateMessage message =
             [ Font.color Colors.blue
             , Font.underline
             ]
-            { url = Url.Builder.absolute [ "EditEvent" ] [ Url.Builder.string "eventId" eventId]
+            { url = Urls.editEvent eventId
             , label = text "Edit existing event"
             }
         ]
