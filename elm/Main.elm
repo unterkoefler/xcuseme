@@ -36,6 +36,7 @@ type alias Model =
     , pickerDateText : String
     , showLogEventModal : Bool
     , flashMessage : Maybe FlashMessage
+    , showMenu : Bool
     }
 
 type alias FlashMessage =
@@ -74,6 +75,7 @@ type Msg
     | LoggedOut (Result Http.Error ())
     | ToggleLogEventModal
     | SetFlashMessage (Maybe FlashMessage)
+    | ToggleMenu
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -226,6 +228,11 @@ update msg model =
             , Cmd.none
             )
 
+        ToggleMenu ->
+            ( { model | showMenu = not model.showMenu }
+            , Cmd.none
+            )
+
         SetFlashMessage fm ->
             ( { model | flashMessage = fm }
             , Cmd.none
@@ -329,7 +336,7 @@ view model =
         EventModel e ->
             viewEvent e
         NavBarModel context ->
-            navBar context
+            navBar context model.showMenu
         EventListModel events ->
             viewHome
                 { eventsView = eventCards events
@@ -404,58 +411,99 @@ viewHome { eventsView, innerMenu, selectedDate, events, flashMessage } =
         , eventsView
         ]
 
-navBar : NavBarContext -> Element Msg
-navBar context =
-    column
-        [ width fill
-        ]
-        [ header context
-        , subHeader
-        ]
-
-header : NavBarContext -> Element Msg
-header { loggedIn } =
+navBar : NavBarContext -> Bool -> Element Msg
+navBar { loggedIn } showMenu  =
     let
-        buttons = 
+        menu =
+            if showMenu then
+                menuOptions loggedIn
+            else
+                Element.none
+    in
+    column [ width fill ]
+    [ row 
+        [ width fill
+        , padding 16
+        , Background.color Colors.indigo
+        ]
+        [ link 
+            [ Region.heading 1
+            , Font.size 28
+            , centerX
+            , width fill
+            , Font.center
+            , Font.color Colors.white
+            , paddingEach { top = 0, left = 24, right = 0, bottom = 0 }
+            ]
+            { label = text "XcuseMe"
+            , url = Urls.root
+            }
+        , menuButton
+        ]
+    , menu
+    ]
+
+menuButton :  Element Msg
+menuButton =
+     Input.button 
+        [ Font.size 28
+        , Font.color Colors.white
+        , alignRight
+        , width (px 24)
+
+        ]
+        { label = text "⋮"
+        , onPress = Just ToggleMenu
+        }
+
+menuOptions : Bool -> Element Msg
+menuOptions loggedIn =
+    let
+        logoutButton : Element Msg
+        logoutButton = 
             case loggedIn of
                 True ->
-                    [ Input.button [ width fill, alignRight ]
+                    Input.button menuItemAttrs
                         { label = text "Logout" 
                         , onPress = Just Logout
                         }
-                    ]
                 False ->
-                    []
+                    Element.none
     in
-        row 
-            [ width fill
-            , padding 24 
-            , Background.color Colors.indigo
-            ]
-            [ link 
-                [ Region.heading 1
-                , Font.size 48
-                , paddingEach { left = 0, right = 12, top = 0, bottom = 0 }
-                ]
-                { label = el [ Font.color Colors.white  ] <| text "XcuseMe"
-                , url = Urls.root
-                }
-            , row [ alignRight ] buttons
-            ]
-
-
-subHeader : Element Msg
-subHeader =
-    paragraph 
-        [ Region.heading 2
-        , padding 12
-        , Font.size 18
-        , Font.italic
-        , Background.color Colors.indigoLighter
+    column
+        [ Font.size 18
+        , width fill
+        , Background.color Colors.indigoDarker
+        , Font.color Colors.white
+        , paddingXY 12 0
         ]
-        [ text "Exercise tracking for real people" ]
+    <|
+        borderBetween
+           [ link menuItemAttrs { url = Urls.root, label = text "About"}
+           , logoutButton
+           ] 
+
+menuItemAttrs : List (Attribute Msg)
+menuItemAttrs =
+    [ paddingXY 0 24
+    , Font.alignRight
+    , width fill
+    ]
+
+borderBetween : List (Element msg) -> List (Element msg)
+borderBetween elements =
+    case elements of
+        [] ->
+            []
+
+        [ element ] ->
+            [ element ]
+
+        element :: rest ->
+            el [ Border.widthEach { top = 0, left = 0, right = 0, bottom = 1 }, width fill ]
+                element
+                :: borderBetween rest
         
-            
 
 logEventButton : EventType -> Date -> List Event -> Element Msg
 logEventButton eventType selectedDate events =
@@ -1130,6 +1178,7 @@ init flags =
       , pickerDateText = pickerDateText
       , showLogEventModal = False
       , flashMessage = Nothing
+      , showMenu = False
       }
     , Date.today |> Task.perform ReceiveDate
     )

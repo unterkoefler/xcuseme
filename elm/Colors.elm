@@ -42,12 +42,15 @@ black =
 white =
     rgb255 255 255 255
 
+whiteForSvg =
+    Color.rgb255 255 255 255
+
 indigo =
     rgb255 159 168 218
 
 
-indigoLighter =
-    rgb255 187 194 229
+indigoDarker =
+    rgb255 121 134 203
 
 
 success =
