@@ -135,10 +135,10 @@ eventTypeEncoder : EventType -> Json.Encode.Value
 eventTypeEncoder a =
     case a of
         Exercise ->
-            Json.Encode.string "Exercise"
+            Json.Encode.string "exercise"
 
         Excuse ->
-            Json.Encode.string "Excuse"
+            Json.Encode.string "excuse"
 
 
 eventTypeDecoder : Json.Decode.Decoder EventType

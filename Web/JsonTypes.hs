@@ -11,6 +11,7 @@ import Language.Haskell.To.Elm
 import Application.Lib.DerivingViaElm ( ElmType(..) )
 import Data.Time
 import IHP.ModelSupport ( Violation(..) )
+import Data.Char(toLower)
 
 -- JSON serializable types and functions
 -- -- for exposing IHP data to Elm and JSON responses
@@ -31,7 +32,7 @@ instance HasElmDecoder Aeson.Value EventType where
 
 instance HasElmEncoder Aeson.Value EventType where
     elmEncoderDefinition =
-        Just $ deriveElmJSONEncoder @EventType defaultOptions Aeson.defaultOptions "Api.Generated.eventTypeEncoder"
+        Just $ deriveElmJSONEncoder @EventType defaultOptions Aeson.defaultOptions { Aeson.constructorTagModifier = map Data.Char.toLower } "Api.Generated.eventTypeEncoder"
 
 deriving instance Generic Violation
 deriving instance SOP.Generic Violation
