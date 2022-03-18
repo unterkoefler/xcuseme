@@ -681,6 +681,7 @@ eventCalendar args =
     in
     column
         [ width fill
+        , spacing 6
         ]
     <|
         ([ calendarNavRow { monthIndex = monthIndex, viewingDate = viewingDate }
