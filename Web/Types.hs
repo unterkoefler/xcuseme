@@ -37,3 +37,7 @@ data EventsController
     | UpdateEventAction { eventId :: !(Id Event) }
     | DeleteEventAction { eventId :: !(Id Event) }
     deriving (Eq, Show, Data)
+
+data AboutController
+    = AboutAction
+    deriving (Eq, Show, Data)

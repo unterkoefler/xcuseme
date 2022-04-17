@@ -1,5 +1,6 @@
 module Urls exposing 
     ( root
+    , about
     , deleteSession
     , newSession
     , events
@@ -17,6 +18,10 @@ import Date exposing (Date)
 root : String
 root =
     Url.Builder.absolute [] []
+
+about : String
+about =
+    Url.Builder.absolute [ "About" ] []
 
 deleteSession : String
 deleteSession =

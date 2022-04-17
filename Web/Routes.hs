@@ -12,3 +12,6 @@ instance AutoRoute UserController
 
 instance AutoRoute EventsController
 
+
+instance AutoRoute AboutController
+

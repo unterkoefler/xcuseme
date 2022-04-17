@@ -28,6 +28,7 @@ type Widget
     | NavBarWidget NavBarContext
     | NewEventWidget Event
     | EditEventWidget Event
+    | AboutWidget 
 
 
 widgetEncoder : Widget -> Json.Encode.Value
@@ -57,6 +58,9 @@ widgetEncoder a =
             Json.Encode.object [ ("tag" , Json.Encode.string "EditEventWidget")
             , ("contents" , eventEncoder b) ]
 
+        AboutWidget ->
+            Json.Encode.object [("tag" , Json.Encode.string "AboutWidget")]
+
 
 widgetDecoder : Json.Decode.Decoder Widget
 widgetDecoder =
@@ -85,6 +89,9 @@ widgetDecoder =
         "EditEventWidget" ->
             Json.Decode.succeed EditEventWidget |>
             Json.Decode.Pipeline.required "contents" eventDecoder
+
+        "AboutWidget" ->
+            Json.Decode.succeed AboutWidget
 
         _ ->
             Json.Decode.fail "No matching constructor")

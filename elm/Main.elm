@@ -1,5 +1,6 @@
 module Main exposing (main)
 
+import AboutPage
 import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), eventDecoder)
 import Api
 import Json.Decode
@@ -58,6 +59,7 @@ type WidgetModel
     | ErrorModel String
     | NewEventModel Event
     | EditEventModel Event
+    | AboutModel
 
 type Msg
     = NoOp
@@ -381,6 +383,9 @@ view model =
                 , deleteButton = deleteEventButton event
                 }
 
+        AboutModel ->
+            AboutPage.view
+
 
 nunito : Attribute msg
 nunito =
@@ -479,7 +484,7 @@ menuOptions loggedIn =
         ]
     <|
         borderBetween Colors.white
-           [ link menuItemAttrs { url = Urls.root, label = text "About"}
+           [ link menuItemAttrs { url = Urls.about, label = text "About"}
            , logoutButton
            ] 
 
@@ -1115,6 +1120,8 @@ widgetFlagToModel widget =
             NewEventModel event
         EditEventWidget event ->
             EditEventModel event
+        AboutWidget ->
+            AboutModel
 
 
 

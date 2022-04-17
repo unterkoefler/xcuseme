@@ -7,6 +7,7 @@ import Web.Controller.Sessions
 import Web.View.Layout (defaultLayout)
 
 -- Controller Imports
+import Web.Controller.About
 import Web.Controller.Events
 import Web.Controller.Static
 import Web.Controller.User
@@ -17,6 +18,7 @@ instance FrontController WebApplication where
         , parseRoute @SessionsController
         , parseRoute @UserController
         -- Generator Marker
+        , parseRoute @AboutController
         , parseRoute @EventsController
         ]
 
