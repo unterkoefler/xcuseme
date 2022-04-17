@@ -14,6 +14,9 @@ module Api.Generated exposing
     , Violation(..)
     , violationEncoder
     , violationDecoder
+    , FlashMessage(..)
+    , flashMessageEncoder
+    , flashMessageDecoder
     )
 
 import Json.Decode
@@ -29,6 +32,7 @@ type Widget
     | NewEventWidget Event
     | EditEventWidget Event
     | AboutWidget 
+    | FlashMessageWidget FlashMessage
 
 
 widgetEncoder : Widget -> Json.Encode.Value
@@ -61,6 +65,10 @@ widgetEncoder a =
         AboutWidget ->
             Json.Encode.object [("tag" , Json.Encode.string "AboutWidget")]
 
+        FlashMessageWidget b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "FlashMessageWidget")
+            , ("contents" , flashMessageEncoder b) ]
+
 
 widgetDecoder : Json.Decode.Decoder Widget
 widgetDecoder =
@@ -92,6 +100,10 @@ widgetDecoder =
 
         "AboutWidget" ->
             Json.Decode.succeed AboutWidget
+
+        "FlashMessageWidget" ->
+            Json.Decode.succeed FlashMessageWidget |>
+            Json.Decode.Pipeline.required "contents" flashMessageDecoder
 
         _ ->
             Json.Decode.fail "No matching constructor")
@@ -205,6 +217,39 @@ violationDecoder =
         "HtmlViolation" ->
             Json.Decode.map HtmlViolation (Json.Decode.succeed (\b -> { message = b }) |>
             Json.Decode.Pipeline.required "message" Json.Decode.string)
+
+        _ ->
+            Json.Decode.fail "No matching constructor")
+
+
+type FlashMessage 
+    = SuccessFlashMessage String
+    | ErrorFlashMessage String
+
+
+flashMessageEncoder : FlashMessage -> Json.Encode.Value
+flashMessageEncoder a =
+    case a of
+        SuccessFlashMessage b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "SuccessFlashMessage")
+            , ("contents" , Json.Encode.string b) ]
+
+        ErrorFlashMessage b ->
+            Json.Encode.object [ ("tag" , Json.Encode.string "ErrorFlashMessage")
+            , ("contents" , Json.Encode.string b) ]
+
+
+flashMessageDecoder : Json.Decode.Decoder FlashMessage
+flashMessageDecoder =
+    Json.Decode.field "tag" Json.Decode.string |>
+    Json.Decode.andThen (\a -> case a of
+        "SuccessFlashMessage" ->
+            Json.Decode.succeed SuccessFlashMessage |>
+            Json.Decode.Pipeline.required "contents" Json.Decode.string
+
+        "ErrorFlashMessage" ->
+            Json.Decode.succeed ErrorFlashMessage |>
+            Json.Decode.Pipeline.required "contents" Json.Decode.string
 
         _ ->
             Json.Decode.fail "No matching constructor")

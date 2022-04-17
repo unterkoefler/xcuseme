@@ -4,10 +4,14 @@ import Color as SvgColor
 import Svg exposing (Svg)
 import Element exposing (..)
 
-icon : (SvgColor.Color -> Int -> Svg msg) -> SvgColor.Color -> Int -> Element msg
+icon : (SvgColor.Color -> Int -> Svg msg) -> Color -> Int -> Element msg
 icon iconF color size =
     el [ width (px size), height (px size) ] <|
         html <|
             Svg.svg
                 []
-                [ iconF color size ]
+                [ iconF (elementColorToSvgColor color) size ]
+
+elementColorToSvgColor : Color -> SvgColor.Color
+elementColorToSvgColor = 
+    toRgb >> SvgColor.fromRgba 

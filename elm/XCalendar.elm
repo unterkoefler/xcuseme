@@ -65,13 +65,13 @@ calendarNavRow { monthIndex, viewingDate, onUpdateMonthIndex } =
         , paddingXY 6 6
         ]
             [ Input.button [ alignLeft ] 
-                { label = icon chevron_left Colors.blackForSvg 24 
+                { label = icon chevron_left Colors.black 24 
                 , onPress = Just << onUpdateMonthIndex <| monthIndex - 1 
                 }
             , el [ centerX, paddingEach { left = 48, right = 0, top = 0, bottom = 0 } ] <| text <| Date.format "MMMM y" <| viewingDate
             , Input.button [ alignRight, paddingEach { left = 0, right = 12, bottom = 0, top = 0 }, width (px 48), Font.size 12 ] { label = text "today", onPress = Just << onUpdateMonthIndex <| 0 }
             , Input.button [ alignRight ] 
-                { label = icon chevron_right Colors.blackForSvg 24
+                { label = icon chevron_right Colors.black 24
                 , onPress = Just << onUpdateMonthIndex <| monthIndex + 1 }
             ]
 

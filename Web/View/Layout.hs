@@ -6,6 +6,7 @@ import qualified Text.Blaze.Html5            as H
 import qualified Text.Blaze.Html5.Attributes as A
 import Generated.Types
 import IHP.Controller.RequestContext
+import IHP.FlashMessages.Types
 import Web.Types
 import Web.Routes
 import Application.Helper.View
@@ -23,7 +24,7 @@ defaultLayout inner = H.docTypeHtml ! A.lang "en" $ [hsx|
 </head>
 <body>
     <div class="navBar">{navBarWidgetWithContext}</div>
-    {renderFlashMessages}
+    {myRenderFlashMessages}
     {inner}
 </body>
 |]
@@ -81,3 +82,13 @@ icons = [hsx|
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
 |]
+
+myRenderFlashMessages :: (?context :: ControllerContext) => Html
+myRenderFlashMessages = [hsx|
+        <div>
+            {forEach flashMessages flashMessageWidget}
+        </div>
+    |]
+    where
+        flashMessages :: [FlashMessage]
+        flashMessages = fromFrozenContext

@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import AboutPage
-import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), eventDecoder)
+import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), FlashMessage(..), eventDecoder)
 import Api
 import Json.Decode
 import Browser
@@ -22,6 +22,8 @@ import Html.Attributes
 import Http
 import Material.Icons.Maps exposing (directions_run, hotel)
 import Material.Icons.Content exposing (add)
+import Material.Icons.Action exposing (check_circle)
+import Material.Icons.Alert exposing (error_outline)
 import Svg exposing (Svg)
 import Task
 import Time
@@ -41,16 +43,6 @@ type alias Model =
     , showMenu : Bool
     }
 
-type alias FlashMessage =
-    { messageType : FlashMessageType
-    , message : String
-    }
-
-type FlashMessageType
-    = Success
-    | Error
-    | Info
-
 type WidgetModel
     = EventModel Event
     | EventListModel (List Event)
@@ -60,6 +52,7 @@ type WidgetModel
     | NewEventModel Event
     | EditEventModel Event
     | AboutModel
+    | FlashMessageModel FlashMessage
 
 type Msg
     = NoOp
@@ -153,7 +146,7 @@ update msg model =
             let
                 errorMsg = httpErrorToString e
             in
-            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
             , Cmd.none 
             )
 
@@ -177,7 +170,7 @@ update msg model =
             let
                 errorMsg = httpErrorToString e
             in
-            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
             , Cmd.none 
             )
 
@@ -201,7 +194,7 @@ update msg model =
             let
                 errorMsg = httpErrorToString e
             in
-            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
             , Cmd.none 
             )
 
@@ -219,7 +212,7 @@ update msg model =
             let
                 errorMsg = httpErrorToString e
             in
-            ( { model | flashMessage = Just { messageType = Error, message = errorMsg } }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
             , Cmd.none 
             )
 
@@ -386,6 +379,9 @@ view model =
         AboutModel ->
             AboutPage.view
 
+        FlashMessageModel flashMessage ->
+            viewFlashMessage flashMessage
+
 
 nunito : Attribute msg
 nunito =
@@ -541,9 +537,8 @@ logEventButton eventType selectedDate events =
                 (fullWidthButtonAttrs Colors.lightGray)
                 { label = text <| (++) "Log " eventTypeString
                 , onPress = 
-                    { message = "You can log only one exercise or excuse per day"
-                    , messageType = Info
-                    } |> Just |> SetFlashMessage |> Just 
+                    ErrorFlashMessage "You can log only one exercise or excuse per day"
+                    |> Just |> SetFlashMessage |> Just 
                 }
 
 eventTypeToString : EventType -> String
@@ -757,7 +752,7 @@ calendarCard maybeEvent showLogEventModal selectedDate =
                 ([ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] ++ modalAttrs)
                 <| card 
                     { action = Button (Just ToggleLogEventModal)
-                    , lead = icon add Colors.lightGrayForSvg 24
+                    , lead = icon add Colors.lightGray 24
                     , labelText = "Nothing logged for selected day" 
                     }
         Just e ->
@@ -820,10 +815,10 @@ eventCard event =
         (iconF, iconColor) =
             case event.eventType of
                 Exercise ->
-                    ( directions_run, Colors.tealForSvg )
+                    ( directions_run, Colors.teal )
 
                 Excuse ->
-                    ( hotel, Colors.redForSvg )
+                    ( hotel, Colors.red )
 
     in
     card { lead = icon iconF iconColor 24, labelText = txt, action = Link url }
@@ -1019,27 +1014,37 @@ nonUniqueDateMessage message =
 
 
 viewFlashMessage : FlashMessage -> Element Msg
-viewFlashMessage { messageType, message } =
+viewFlashMessage flashMessage =
     let
-        bgColor : Color
-        bgColor =
-            case messageType of
-                Success ->
-                    Colors.success
+        (message, color) =
+            case flashMessage of
+                SuccessFlashMessage m ->
+                    (m, Colors.success)
 
-                Info ->
-                    Colors.info
+                ErrorFlashMessage m ->
+                    (m, Colors.error)
+        
+        iconFunction = 
+            case flashMessage of
+                SuccessFlashMessage _ ->
+                    check_circle
 
-                Error ->
-                    Colors.error
+                ErrorFlashMessage _ ->
+                    error_outline
     in
-    paragraph
-        [ Background.color bgColor
-        , Font.color Colors.white
-        , padding 6
-        ]
-        [ text message
-        ]
+    el
+        [ paddingXY 24 12 ]
+        <|
+        row
+            [ Border.width 2
+            , Border.color color
+            , Border.rounded 6
+            , paddingXY 12 6
+            , spacing 12
+            ]
+            [ icon iconFunction color 24 
+            , paragraph [] [ text message ]
+            ]
 
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
@@ -1122,6 +1127,8 @@ widgetFlagToModel widget =
             EditEventModel event
         AboutWidget ->
             AboutModel
+        FlashMessageWidget flashMessage ->
+            FlashMessageModel flashMessage
 
 
 

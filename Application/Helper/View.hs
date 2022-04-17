@@ -8,11 +8,13 @@ module Application.Helper.View (
     newEventWidget,
     editEventWidget,
     aboutWidget,
+    flashMessageWidget,
     Widget(..),
     NavBarContext(..)
 ) where
 
 -- Here you can add functions which are available in all your views
+import IHP.FlashMessages.Types
 import IHP.ViewPrelude
 import Generated.Types
 import Data.Aeson as Aeson
@@ -30,11 +32,33 @@ data Widget
     | NewEventWidget EventJSON
     | EditEventWidget EventJSON
     | AboutWidget
+    | FlashMessageWidget FlashMessage
     deriving ( Generic
              , Aeson.ToJSON
              , SOP.Generic
              , SOP.HasDatatypeInfo
              )
+
+deriving instance Generic FlashMessage
+deriving instance Aeson.ToJSON FlashMessage
+deriving instance SOP.Generic FlashMessage
+deriving instance SOP.HasDatatypeInfo FlashMessage
+instance HasElmType FlashMessage where
+    elmDefinition = Just $ "Api.Generated.FlashMessage"
+                            |> deriveElmTypeDefinition @FlashMessage
+                                Language.Haskell.To.Elm.defaultOptions
+instance HasElmDecoder Aeson.Value FlashMessage  where
+  elmDecoderDefinition =
+    Just $ "Api.Generated.flashMessageDecoder"
+              |> deriveElmJSONDecoder @FlashMessage
+                Language.Haskell.To.Elm.defaultOptions Aeson.defaultOptions
+
+instance HasElmEncoder Aeson.Value FlashMessage where
+  elmEncoderDefinition =
+    Just $ "Api.Generated.flashMessageEncoder"
+              |> deriveElmJSONEncoder @FlashMessage
+                Language.Haskell.To.Elm.defaultOptions Aeson.defaultOptions
+
 
 -- haskell-to-elm instances for the Widget type
 
@@ -113,4 +137,9 @@ navBarWidget context = [hsx|
 aboutWidget :: Html
 aboutWidget = [hsx|
     <div data-flags={encode AboutWidget} class="elm"></div>
+|]
+
+flashMessageWidget :: FlashMessage -> Html
+flashMessageWidget flashMessage = [hsx|
+    <div data-flags={encode $ FlashMessageWidget flashMessage} class="elm"></div>
 |]
