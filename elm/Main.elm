@@ -1,7 +1,7 @@
 module Main exposing (main)
 
 import AboutPage
-import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), FlashMessage(..), eventDecoder)
+import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), FlashMessage(..), eventDecoder, User)
 import Api
 import Json.Decode
 import Browser
@@ -24,6 +24,7 @@ import Material.Icons.Maps exposing (directions_run, hotel)
 import Material.Icons.Content exposing (add)
 import Material.Icons.Action exposing (check_circle)
 import Material.Icons.Alert exposing (error_outline)
+import RelativeDate
 import Svg exposing (Svg)
 import Task
 import Time
@@ -54,8 +55,11 @@ type WidgetModel
     | AboutModel
     | FlashMessageModel FlashMessage
     | LoginModel { email : String, password : String }
+    | NewUserModel { email : String, password : String, errors : List (String, Violation)  }
 
 initLoginModel = { email = "", password = "" }
+
+initNewUserModel = { email = "", password = "", errors = [] }
 
 type Msg
     = NoOp
@@ -70,6 +74,8 @@ type Msg
     | EventUpdated (Result Http.Error Event)
     | DeleteEvent Event
     | EventDeleted (Result Http.Error ())
+    | CreateUser
+    | UserCreated (Result Http.Error User)
     | Login
     | LoggedIn (Result Http.Error ())
     | Logout
@@ -143,7 +149,7 @@ update msg model =
             case model.widget of
                 NewEventModel event ->
                     ( { model | flashMessage = Nothing }
-                    , Api.createEvent { event = event, dateText =model.pickerDateText }
+                    , Api.createEvent { event = event, dateText = model.pickerDateText }
                             EventCreated
                     )
                 _ ->
@@ -248,6 +254,11 @@ update msg model =
                     , Cmd.none
                     )
 
+                NewUserModel data ->
+                    ( { model | widget = NewUserModel { data | email = newEmail } }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -258,6 +269,10 @@ update msg model =
                     , Cmd.none
                     )
 
+                NewUserModel data ->
+                    ( { model | widget = NewUserModel { data | password = newPassword } }
+                    , Cmd.none
+                    )
                 _ ->
                     ( model, Cmd.none )
 
@@ -284,6 +299,43 @@ update msg model =
             ( { model | flashMessage = SuccessFlashMessage "you're in" |> Just }
             , Browser.Navigation.load Urls.root
             )
+
+        CreateUser ->
+            case model.widget of
+                NewUserModel { email, password } ->
+                    ( model
+                    , Api.createUser { email = email, password = password } UserCreated
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UserCreated (Err e) ->
+            -- TODO: cuz of the redirect nonsense, this probably won't work
+            let
+                errorMsg = httpErrorToString e
+            in
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
+            , Cmd.none 
+            )
+
+        UserCreated (Ok user) ->
+            case user.errors of
+                [] ->
+                    ( model
+                    , Browser.Navigation.load Urls.root
+                    )
+
+                _ ->
+                    case model.widget of
+                        NewUserModel data ->
+                            ( { model | widget = NewUserModel { data | errors = user.errors } }
+                            , Cmd.none
+                            )
+                        _ ->
+                            ( { model | flashMessage = ErrorFlashMessage "Something unexpected happened. Please refresh the page." |> Just }
+                            , Cmd.none
+                            )
 
 
 httpErrorToString : Http.Error -> String
@@ -321,9 +373,12 @@ updateEventDate model event change =
 
 parseDate : String -> Maybe Date
 parseDate str =
-    str 
-        |> Date.fromIsoString
-        |> Result.toMaybe
+    if String.length str < 10 then
+        Nothing
+    else
+        str 
+            |> Date.fromIsoString
+            |> Result.toMaybe
 
 updateEventDateAndClosePicker : Model -> Event -> Date -> Model
 updateEventDateAndClosePicker model event date =
@@ -435,6 +490,9 @@ view model =
 
         LoginModel data -> 
             loginForm data
+
+        NewUserModel data ->
+            newUserForm data { flashMessage = model.flashMessage }
 
 
 nunito : Attribute msg
@@ -711,7 +769,7 @@ viewEvent event =
         , paddingXY 48 0
         ]
         [ row [ width fill ] [ titleEl, editLink ]
-        , paragraph [ Font.italic, Font.size 12 ] [ text <| Date.format "EEEE, MMMM d YYYY" <| eventToDate event ]
+        , paragraph [ Font.italic, Font.size 12 ] [ text <| Date.format "EEEE MMMM d, YYYY" <| eventToDate event ]
         , paragraph [ Font.size 14 ] [ text event.description ]
         ]
 
@@ -969,6 +1027,7 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
                 }
             , deleteButton
             ]
+        , relativeDateInfo { dateText = pickerDateText, currentDate = currentDate }
         , formError dateError
         , Input.multiline []
             { onChange = UpdateEventDescription
@@ -1006,6 +1065,17 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
                 }
             ]
         ]
+
+relativeDateInfo : { dateText : String, currentDate : Date } -> Element Msg
+relativeDateInfo { dateText, currentDate } =
+    case parseDate dateText of
+        Nothing ->
+            Element.none
+        Just date ->
+            RelativeDate.toString { today = currentDate, other = date }
+                |> text
+                |> List.singleton
+                |> paragraph [ Font.italic, Font.size 14 ]
 
 loginForm : { email : String, password : String } -> Element Msg
 loginForm { email, password } =
@@ -1056,6 +1126,76 @@ loginForm { email, password } =
                 { url = Urls.about
                 , label = text "learn more."
                 }
+            ]
+        ]
+
+newUserForm : { email : String, password : String, errors : List (String, Violation) } -> 
+    { flashMessage : Maybe FlashMessage } ->
+    Element Msg
+newUserForm { email, password, errors } { flashMessage } =
+    let
+        emailError = 
+            errorMessageForField errors "email"
+
+        passwordError =
+            errorMessageForField errors "password"
+    in
+    column
+        [ spacing 24
+        , paddingEach { left = 32, right = 0, top = 0, bottom = 0 }
+        ]
+        [ flashMessage |> Maybe.map viewFlashMessage |> Maybe.withDefault Element.none
+        , Input.email
+            []
+            { label = Input.labelAbove [] <| text "Email"
+            , text = email
+            , placeholder = Nothing
+            , onChange = UpdateEmail
+            }
+        , formError emailError
+        , Input.newPassword
+            []
+            { label = Input.labelAbove [] <| text "Password"
+            , text = password
+            , onChange = UpdatePassword
+            , placeholder = Nothing
+            , show = False
+            }
+        , formError passwordError
+        , Input.button
+            [ Border.rounded 4
+            , Border.color Colors.black
+            , Border.width 1
+            , paddingXY 24 12
+            , Background.color Colors.indigo
+            ]
+            { label = text "Create Account"
+            , onPress = Just CreateUser
+            }
+        , column 
+            [ spacing 14 ]
+            [ paragraph
+                [ Font.size 14 ]
+                [ text "Been here before? "
+                , link
+                    [ Font.underline
+                    , Font.color Colors.blue
+                    ]
+                    { url = Urls.newSession
+                    , label = text "Login."
+                    }
+                ]
+            , paragraph
+                [ Font.size 14 ]
+                [ text "Confused? "
+                , link
+                    [ Font.underline
+                    , Font.color Colors.blue
+                    ]
+                    { url = Urls.about
+                    , label = text "Learn more."
+                    }
+                ]
             ]
         ]
 
@@ -1237,6 +1377,8 @@ widgetFlagToModel widget =
             FlashMessageModel flashMessage
         LoginWidget ->
             LoginModel initLoginModel
+        NewUserWidget ->
+            NewUserModel initNewUserModel
 
 
 

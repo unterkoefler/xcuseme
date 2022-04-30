@@ -5,6 +5,7 @@ module Urls exposing
     , newSession
     , createSession
     , newUser
+    , createUser
     , events
     , showEvent
     , editEvent
@@ -39,6 +40,9 @@ createSession =
 
 newUser =
     Url.Builder.absolute [ "NewUser" ] []
+
+createUser =
+    Url.Builder.absolute [ "CreateUser" ] []
 
 events : String -> String
 events mode =

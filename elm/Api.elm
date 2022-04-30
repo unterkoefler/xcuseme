@@ -4,9 +4,10 @@ module Api exposing
     , deleteEvent
     , logout
     , login
+    , createUser
     )
 
-import Api.Generated exposing (Event, EventType(..), eventDecoder, eventTypeEncoder)
+import Api.Generated exposing (Event, EventType(..), eventDecoder, eventTypeEncoder, User, userDecoder)
 import Http
 import Json.Encode
 import Urls
@@ -65,6 +66,16 @@ login credentials onFinish =
         , url = Urls.createSession
         , body = credentialsEncoder credentials |> Http.jsonBody 
         , expect = Http.expectWhatever onFinish
+        }
+
+createUser : { email : String, password : String } -> (Result Http.Error User -> msg) -> Cmd msg
+createUser credentials onFinish =
+    ihpRequest
+        { method = post_method
+        , headers = []
+        , url = Urls.createUser
+        , body = credentialsEncoder credentials |> Http.jsonBody
+        , expect = Http.expectJson onFinish userDecoder
         }
 
 credentialsEncoder : { email : String, password : String } -> Json.Encode.Value

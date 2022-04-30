@@ -86,3 +86,27 @@ eventToJSON event =
         errors = annotations metaBag
     }
 
+data UserJSON = UserJSON
+    { errors :: ![(Text, Violation)]
+    } deriving ( Generic
+               , SOP.Generic
+               , SOP.HasDatatypeInfo
+               )
+     deriving ( Aeson.ToJSON
+              , Aeson.FromJSON
+              , HasElmType
+              , HasElmDecoder Aeson.Value
+              , HasElmEncoder Aeson.Value)
+        via ElmType "Api.Generated.User" UserJSON
+
+
+userToJSON :: User -> UserJSON
+userToJSON user =
+    let metaBag = get #meta user
+    in UserJSON {
+        errors = map fixFieldName $ annotations metaBag
+    }
+
+fixFieldName :: (Text, Violation) -> (Text, Violation)
+fixFieldName ("passwordHash", violation) = ("password", violation)
+fixFieldName other = other

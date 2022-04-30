@@ -10,6 +10,7 @@ module Application.Helper.View (
     aboutWidget,
     flashMessageWidget,
     loginWidget,
+    newUserWidget,
     Widget(..),
     NavBarContext(..)
 ) where
@@ -34,6 +35,7 @@ data Widget
     | EditEventWidget EventJSON
     | AboutWidget
     | LoginWidget
+    | NewUserWidget
     | FlashMessageWidget FlashMessage
     deriving ( Generic
              , Aeson.ToJSON
@@ -131,6 +133,9 @@ flashMessageWidget =
 
 loginWidget :: Html
 loginWidget = widgetToHtml LoginWidget
+
+newUserWidget :: Html
+newUserWidget = widgetToHtml NewUserWidget
 
 widgetToHtml :: Widget -> Html
 widgetToHtml widget = [hsx|

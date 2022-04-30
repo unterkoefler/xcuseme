@@ -17,6 +17,9 @@ module Api.Generated exposing
     , FlashMessage(..)
     , flashMessageEncoder
     , flashMessageDecoder
+    , User
+    , userEncoder
+    , userDecoder
     )
 
 import Json.Decode
@@ -33,6 +36,7 @@ type Widget
     | EditEventWidget Event
     | AboutWidget 
     | LoginWidget 
+    | NewUserWidget 
     | FlashMessageWidget FlashMessage
 
 
@@ -68,6 +72,9 @@ widgetEncoder a =
 
         LoginWidget ->
             Json.Encode.object [("tag" , Json.Encode.string "LoginWidget")]
+
+        NewUserWidget ->
+            Json.Encode.object [("tag" , Json.Encode.string "NewUserWidget")]
 
         FlashMessageWidget b ->
             Json.Encode.object [ ("tag" , Json.Encode.string "FlashMessageWidget")
@@ -107,6 +114,9 @@ widgetDecoder =
 
         "LoginWidget" ->
             Json.Decode.succeed LoginWidget
+
+        "NewUserWidget" ->
+            Json.Decode.succeed NewUserWidget
 
         "FlashMessageWidget" ->
             Json.Decode.succeed FlashMessageWidget |>
@@ -260,3 +270,21 @@ flashMessageDecoder =
 
         _ ->
             Json.Decode.fail "No matching constructor")
+
+
+type alias User  =
+    { errors : List (String , Violation) }
+
+
+userEncoder : User -> Json.Encode.Value
+userEncoder a =
+    Json.Encode.object [ ("errors" , Json.Encode.list (\b -> case b of
+        (c , d) ->
+            Json.Encode.list identity [ Json.Encode.string c
+            , violationEncoder d ]) a.errors) ]
+
+
+userDecoder : Json.Decode.Decoder User
+userDecoder =
+    Json.Decode.succeed User |>
+    Json.Decode.Pipeline.required "errors" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 violationDecoder)))

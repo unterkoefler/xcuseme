@@ -1,18 +1,15 @@
+{-# language DeriveAnyClass #-}
+
 module Web.View.User.New where
+
 import Web.View.Prelude
+import Web.JsonTypes
 
 data NewView = NewView { user :: User }
 
 instance View NewView where
-    html NewView { .. } = [hsx|
-        <h1>Create Account</h1>
-        {renderForm user}
-    |]
+    html NewView { .. } = newUserWidget
 
-renderForm :: User -> Html
-renderForm user = formFor user [hsx|
-    {(textField #email)}
-    {(passwordField #passwordHash) {fieldLabel = "New Password"}}
-    {submitButton}
+    json NewView { .. } = toJSON $ userToJSON user
 
-|]
+

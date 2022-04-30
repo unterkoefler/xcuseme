@@ -27,5 +27,6 @@ run = do
                 <> jsonDefinitions @NavBarContext
                 <> jsonDefinitions @Violation
                 <> jsonDefinitions @FlashMessage
+                <> jsonDefinitions @UserJSON
 
     modules = Pretty.modules definitions
