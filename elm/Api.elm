@@ -3,6 +3,7 @@ module Api exposing
     , updateEvent
     , deleteEvent
     , logout
+    , login
     )
 
 import Api.Generated exposing (Event, EventType(..), eventDecoder, eventTypeEncoder)
@@ -10,10 +11,13 @@ import Http
 import Json.Encode
 import Urls
 
+post_method = "POST"
+delete_method = "DELETE"
+
 createEvent : { event : Event, dateText : String } -> (Result Http.Error Event -> msg) -> Cmd msg
 createEvent { event, dateText } onFinish =
     ihpRequest
-        { method = "POST"
+        { method = post_method
         , headers = []
         , url = Urls.createEvent
         , body = eventWithDateStringEncoder event dateText |> Http.jsonBody
@@ -25,7 +29,7 @@ createEvent { event, dateText } onFinish =
 updateEvent : { event : Event, dateText : String } -> (Result Http.Error Event -> msg) -> Cmd msg
 updateEvent { event, dateText } onFinish =
     ihpRequest
-        { method = "POST"
+        { method = post_method
         , headers = []
         , url = Urls.updateEvent event.id
         , body = eventWithDateStringEncoder event dateText |> Http.jsonBody 
@@ -35,7 +39,7 @@ updateEvent { event, dateText } onFinish =
 deleteEvent : Event -> (Result Http.Error () -> msg ) -> Cmd msg
 deleteEvent event onFinish =
     ihpRequest
-        { method = "DELETE"
+        { method = delete_method
         , headers = []
         , url = Urls.deleteEvent event.id
         , body = Http.emptyBody
@@ -46,12 +50,29 @@ deleteEvent event onFinish =
 logout : (Result Http.Error () -> msg) -> Cmd msg
 logout onFinish =
     ihpRequest
-        { method = "DELETE"
+        { method = delete_method
         , headers = []
         , url = Urls.deleteSession
         , body = Http.emptyBody
         , expect = Http.expectWhatever onFinish
         }
+
+login : { email : String, password : String } -> (Result Http.Error () -> msg) -> Cmd msg
+login credentials onFinish =
+    ihpRequest
+        { method = post_method
+        , headers = [ Http.header "Accept" "text/html" ] -- TODO: don't do this
+        , url = Urls.createSession
+        , body = credentialsEncoder credentials |> Http.jsonBody 
+        , expect = Http.expectWhatever onFinish
+        }
+
+credentialsEncoder : { email : String, password : String } -> Json.Encode.Value
+credentialsEncoder { email, password } =
+    Json.Encode.object
+        [ ( "email", Json.Encode.string email )
+        , ( "password", Json.Encode.string password )
+        ]
 
 eventWithDateStringEncoder : Event -> String -> Json.Encode.Value
 eventWithDateStringEncoder event dateText  =

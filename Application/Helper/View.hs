@@ -9,6 +9,7 @@ module Application.Helper.View (
     editEventWidget,
     aboutWidget,
     flashMessageWidget,
+    loginWidget,
     Widget(..),
     NavBarContext(..)
 ) where
@@ -32,6 +33,7 @@ data Widget
     | NewEventWidget EventJSON
     | EditEventWidget EventJSON
     | AboutWidget
+    | LoginWidget
     | FlashMessageWidget FlashMessage
     deriving ( Generic
              , Aeson.ToJSON
@@ -97,49 +99,40 @@ data NavBarContext = NavBarContext
 -- Widgets
 
 eventWidget :: Event -> Html
-eventWidget event = [hsx|
-    <div data-flags={encode eventData} class="elm"></div>
-|]
-    where
-        eventData :: Widget = EventWidget $ eventToJSON event
+eventWidget =
+    widgetToHtml . EventWidget . eventToJSON
 
 newEventWidget :: Event -> Html
-newEventWidget event = [hsx|
-    <div data-flags={encode eventData} class="elm"></div>
-|]
-    where
-        eventData :: Widget = NewEventWidget $ eventToJSON event
+newEventWidget =
+    widgetToHtml . NewEventWidget . eventToJSON
 
 editEventWidget :: Event -> Html
-editEventWidget event = [hsx|
-    <div data-flags={encode eventData} class="elm"></div>
-|]
-    where
-        eventData :: Widget = EditEventWidget $ eventToJSON event
+editEventWidget =
+    widgetToHtml . EditEventWidget . eventToJSON
 
 eventListWidget :: [Event] -> Html
-eventListWidget events = [hsx|
-    <div data-flags={encode eventListData} class="elm"></div>
-|]
-    where eventListData :: Widget = EventListWidget $ map eventToJSON events
+eventListWidget =
+    widgetToHtml . EventListWidget . map eventToJSON
 
 eventCalendarWidget :: [Event] -> Html
-eventCalendarWidget events = [hsx|
-    <div data-flags={encode eventCalendarData} class="elm"></div>
-|]
-    where eventCalendarData :: Widget = EventCalendarWidget $ map eventToJSON events
+eventCalendarWidget =
+    widgetToHtml . EventCalendarWidget . map eventToJSON
 
 navBarWidget :: NavBarContext -> Html
-navBarWidget context = [hsx|
-    <div data-flags={encode $ NavBarWidget context} class="elm"></div>
-|]
+navBarWidget =
+    widgetToHtml . NavBarWidget
 
 aboutWidget :: Html
-aboutWidget = [hsx|
-    <div data-flags={encode AboutWidget} class="elm"></div>
-|]
+aboutWidget = widgetToHtml AboutWidget
 
 flashMessageWidget :: FlashMessage -> Html
-flashMessageWidget flashMessage = [hsx|
-    <div data-flags={encode $ FlashMessageWidget flashMessage} class="elm"></div>
+flashMessageWidget =
+    widgetToHtml . FlashMessageWidget
+
+loginWidget :: Html
+loginWidget = widgetToHtml LoginWidget
+
+widgetToHtml :: Widget -> Html
+widgetToHtml widget = [hsx|
+    <div data-flags={encode widget} class="elm"></div>
 |]

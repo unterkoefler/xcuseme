@@ -32,6 +32,7 @@ type Widget
     | NewEventWidget Event
     | EditEventWidget Event
     | AboutWidget 
+    | LoginWidget 
     | FlashMessageWidget FlashMessage
 
 
@@ -64,6 +65,9 @@ widgetEncoder a =
 
         AboutWidget ->
             Json.Encode.object [("tag" , Json.Encode.string "AboutWidget")]
+
+        LoginWidget ->
+            Json.Encode.object [("tag" , Json.Encode.string "LoginWidget")]
 
         FlashMessageWidget b ->
             Json.Encode.object [ ("tag" , Json.Encode.string "FlashMessageWidget")
@@ -100,6 +104,9 @@ widgetDecoder =
 
         "AboutWidget" ->
             Json.Decode.succeed AboutWidget
+
+        "LoginWidget" ->
+            Json.Decode.succeed LoginWidget
 
         "FlashMessageWidget" ->
             Json.Decode.succeed FlashMessageWidget |>

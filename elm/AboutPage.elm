@@ -10,7 +10,7 @@ import Element.Region as Region
 
 view : Element msg
 view =
-    textColumn
+    column
         [ spacing 24 
         , paddingXY 36 24
         ]

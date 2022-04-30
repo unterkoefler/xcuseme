@@ -3,6 +3,8 @@ module Urls exposing
     , about
     , deleteSession
     , newSession
+    , createSession
+    , newUser
     , events
     , showEvent
     , editEvent
@@ -30,6 +32,13 @@ deleteSession =
 newSession : String
 newSession =
     Url.Builder.absolute [ "NewSession" ] []
+
+createSession : String
+createSession =
+    Url.Builder.absolute [ "CreateSession" ] []
+
+newUser =
+    Url.Builder.absolute [ "NewUser" ] []
 
 events : String -> String
 events mode =

@@ -53,6 +53,9 @@ type WidgetModel
     | EditEventModel Event
     | AboutModel
     | FlashMessageModel FlashMessage
+    | LoginModel { email : String, password : String }
+
+initLoginModel = { email = "", password = "" }
 
 type Msg
     = NoOp
@@ -67,11 +70,15 @@ type Msg
     | EventUpdated (Result Http.Error Event)
     | DeleteEvent Event
     | EventDeleted (Result Http.Error ())
+    | Login
+    | LoggedIn (Result Http.Error ())
     | Logout
     | LoggedOut (Result Http.Error ())
     | ToggleLogEventModal
     | SetFlashMessage (Maybe FlashMessage)
     | ToggleMenu
+    | UpdateEmail String
+    | UpdatePassword String
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -233,6 +240,50 @@ update msg model =
             ( { model | flashMessage = fm }
             , Cmd.none
             )
+    
+        UpdateEmail newEmail ->
+            case model.widget of
+                LoginModel data ->
+                    ( { model | widget = LoginModel { data | email = newEmail } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        UpdatePassword newPassword ->
+            case model.widget of
+                LoginModel data ->
+                    ( { model | widget = LoginModel { data | password = newPassword } }
+                    , Cmd.none
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        Login ->
+            case model.widget of
+                LoginModel data ->
+                    ( model
+                    , Api.login data LoggedIn
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoggedIn (Err e) ->
+            -- TODO: cuz of the redirect nonsense, this probably won't work
+            let
+                errorMsg = httpErrorToString e
+            in
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
+            , Cmd.none 
+            )
+
+        LoggedIn (Ok _) ->
+            ( { model | flashMessage = SuccessFlashMessage "you're in" |> Just }
+            , Browser.Navigation.load Urls.root
+            )
 
 
 httpErrorToString : Http.Error -> String
@@ -381,6 +432,9 @@ view model =
 
         FlashMessageModel flashMessage ->
             viewFlashMessage flashMessage
+
+        LoginModel data -> 
+            loginForm data
 
 
 nunito : Attribute msg
@@ -953,6 +1007,58 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
             ]
         ]
 
+loginForm : { email : String, password : String } -> Element Msg
+loginForm { email, password } =
+    column
+        [ spacing 24
+        , paddingEach { left = 32, right = 0, top = 0, bottom = 0 }
+        ]
+        [ Input.email
+            []
+            { label = Input.labelAbove [] <| text "Email"
+            , text = email
+            , placeholder = Nothing
+            , onChange = UpdateEmail
+            }
+        , Input.currentPassword
+            []
+            { label = Input.labelAbove [] <| text "Password"
+            , text = password
+            , onChange = UpdatePassword
+            , placeholder = Nothing
+            , show = False
+            }
+        , Input.button
+            [ Border.rounded 4
+            , Border.color Colors.black
+            , Border.width 1
+            , paddingXY 24 12
+            , Background.color Colors.indigo
+            ]
+            { label = text "Login"
+            , onPress = Just Login
+            }
+        , paragraph
+            [ Font.size 14 ]
+            [ text "New here? "
+            , link
+                [ Font.underline
+                , Font.color Colors.blue
+                ]
+                { url = Urls.newUser
+                , label = text "Create an account "
+                }
+            , text "or "
+            , link
+                [ Font.underline
+                , Font.color Colors.blue
+                ]
+                { url = Urls.about
+                , label = text "learn more."
+                }
+            ]
+        ]
+
 
 deleteEventButton : Event -> Element Msg
 deleteEventButton event =
@@ -1129,6 +1235,8 @@ widgetFlagToModel widget =
             AboutModel
         FlashMessageWidget flashMessage ->
             FlashMessageModel flashMessage
+        LoginWidget ->
+            LoginModel initLoginModel
 
 
 
