@@ -16,12 +16,12 @@ instance Controller StatsController where
         render IndexView { .. }
 
 numExcuses :: [Event] -> Int
-numExcuses events =
-    length . filter (\e -> Generated.Types.eventType e == Excuse) $ events
+numExcuses =
+    length . filter (\e -> Generated.Types.eventType e == Excuse)
 
 numExercises :: [Event] -> Int
-numExercises events =
-    length . filter (\e -> Generated.Types.eventType e == Exercise) $ events
+numExercises =
+    length . filter (\e -> Generated.Types.eventType e == Exercise)
 
 currentExerciseStreakF :: [Event] -> Int
 currentExerciseStreakF [] = 0
@@ -37,7 +37,7 @@ currentStreak :: [Event] -> Int
 currentStreak [] = 0
 currentStreak [_] = 1
 currentStreak (first:second:rest) =
-    if (diffDays (date first) (date second) == 1) then
+    if diffDays (date first) (date second) == 1 then
         1 + currentStreak (second:rest)
     else
         1

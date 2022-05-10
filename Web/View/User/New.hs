@@ -1,5 +1,3 @@
-{-# language DeriveAnyClass #-}
-
 module Web.View.User.New where
 
 import Web.View.Prelude

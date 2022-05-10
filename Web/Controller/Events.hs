@@ -25,7 +25,7 @@ instance Controller EventsController where
             _ ->
                 render IndexView { .. }
 
-    action (NewEventAction { eventType, year, month, day }) = do
+    action NewEventAction { eventType, year, month, day } = do
         let eventType' = do
             case toLower eventType of
                 "exercise" -> Exercise
@@ -36,7 +36,7 @@ instance Controller EventsController where
                 (Just y, Just m, Just d) ->
                     pure $ fromGregorian (toInteger y) m d
                 _ ->
-                    getCurrentTime >>= return . utctDay
+                    fmap utctDay getCurrentTime
         let event = newRecord |> set #eventType eventType'
                               |> set #date date
         render NewView { .. }
