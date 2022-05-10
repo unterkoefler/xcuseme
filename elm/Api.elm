@@ -1,19 +1,25 @@
-module Api exposing 
+module Api exposing
     ( createEvent
-    , updateEvent
-    , deleteEvent
-    , logout
-    , login
     , createUser
+    , deleteEvent
+    , login
+    , logout
+    , updateEvent
     )
 
-import Api.Generated exposing (Event, EventType(..), eventDecoder, eventTypeEncoder, User, userDecoder)
+import Api.Generated exposing (Event, EventType(..), User, eventDecoder, eventTypeEncoder, userDecoder)
 import Http
 import Json.Encode
 import Urls
 
-post_method = "POST"
-delete_method = "DELETE"
+
+post_method =
+    "POST"
+
+
+delete_method =
+    "DELETE"
+
 
 createEvent : { event : Event, dateText : String } -> (Result Http.Error Event -> msg) -> Cmd msg
 createEvent { event, dateText } onFinish =
@@ -22,9 +28,8 @@ createEvent { event, dateText } onFinish =
         , headers = []
         , url = Urls.createEvent
         , body = eventWithDateStringEncoder event dateText |> Http.jsonBody
-        , expect = Http.expectJson onFinish eventDecoder 
+        , expect = Http.expectJson onFinish eventDecoder
         }
-
 
 
 updateEvent : { event : Event, dateText : String } -> (Result Http.Error Event -> msg) -> Cmd msg
@@ -33,11 +38,12 @@ updateEvent { event, dateText } onFinish =
         { method = post_method
         , headers = []
         , url = Urls.updateEvent event.id
-        , body = eventWithDateStringEncoder event dateText |> Http.jsonBody 
-        , expect = Http.expectJson onFinish eventDecoder 
+        , body = eventWithDateStringEncoder event dateText |> Http.jsonBody
+        , expect = Http.expectJson onFinish eventDecoder
         }
 
-deleteEvent : Event -> (Result Http.Error () -> msg ) -> Cmd msg
+
+deleteEvent : Event -> (Result Http.Error () -> msg) -> Cmd msg
 deleteEvent event onFinish =
     ihpRequest
         { method = delete_method
@@ -58,15 +64,17 @@ logout onFinish =
         , expect = Http.expectWhatever onFinish
         }
 
+
 login : { email : String, password : String } -> (Result Http.Error () -> msg) -> Cmd msg
 login credentials onFinish =
     ihpRequest
         { method = post_method
         , headers = [ Http.header "Accept" "text/html" ] -- TODO: don't do this
         , url = Urls.createSession
-        , body = credentialsEncoder credentials |> Http.jsonBody 
+        , body = credentialsEncoder credentials |> Http.jsonBody
         , expect = Http.expectWhatever onFinish
         }
+
 
 createUser : { email : String, password : String } -> (Result Http.Error User -> msg) -> Cmd msg
 createUser credentials onFinish =
@@ -78,6 +86,7 @@ createUser credentials onFinish =
         , expect = Http.expectJson onFinish userDecoder
         }
 
+
 credentialsEncoder : { email : String, password : String } -> Json.Encode.Value
 credentialsEncoder { email, password } =
     Json.Encode.object
@@ -85,13 +94,14 @@ credentialsEncoder { email, password } =
         , ( "password", Json.Encode.string password )
         ]
 
+
 eventWithDateStringEncoder : Event -> String -> Json.Encode.Value
-eventWithDateStringEncoder event dateText  =
-     Json.Encode.object 
-         [ ( "eventType", event.eventType |> eventTypeEncoder )
-         , ( "date", Json.Encode.string dateText )
-         , ( "description", Json.Encode.string event.description )
-         ]
+eventWithDateStringEncoder event dateText =
+    Json.Encode.object
+        [ ( "eventType", event.eventType |> eventTypeEncoder )
+        , ( "date", Json.Encode.string dateText )
+        , ( "description", Json.Encode.string event.description )
+        ]
 
 
 ihpRequest :
@@ -113,4 +123,3 @@ ihpRequest { method, headers, url, body, expect } =
         , timeout = Nothing
         , tracker = Nothing
         }
-

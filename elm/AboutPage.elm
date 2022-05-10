@@ -8,23 +8,24 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Region as Region
 
+
 view : Element msg
 view =
     column
-        [ spacing 24 
+        [ spacing 24
         , paddingXY 36 24
         ]
-        [ paragraph 
+        [ paragraph
             [ spacing 16 ]
             [ text """
-				XcuseMe is the exercise tracking app for real people.
-           		Use it to track your exercise -- and your excuses!
-           		Ever wonder how many times you've skipped your
-           		ab routine because you woke up too late? Or
-           		exactly how long that knee injury kept you on the
-           		couch? Life happens and sometimes we can't
-           		keep up, but now we can keep track.
-				"""
+                XcuseMe is the exercise tracking app for real people.
+                Use it to track your exercise -- and your excuses!
+                Ever wonder how many times you've skipped your
+                ab routine because you woke up too late? Or
+                exactly how long that knee injury kept you on the
+                couch? Life happens and sometimes we can't
+                keep up, but now we can keep track.
+                """
             ]
         , paragraph
             [ spacing 16 ]
@@ -57,4 +58,3 @@ view =
                 """
             ]
         ]
-

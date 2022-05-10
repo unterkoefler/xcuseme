@@ -1,14 +1,12 @@
 module Main exposing (main)
 
 import AboutPage
-import Api.Generated exposing (Event, EventType(..), Widget(..), widgetDecoder, NavBarContext, Violation(..), FlashMessage(..), eventDecoder, User)
 import Api
-import Json.Decode
+import Api.Generated exposing (Event, EventType(..), FlashMessage(..), NavBarContext, User, Violation(..), Widget(..), eventDecoder, widgetDecoder)
 import Browser
 import Browser.Navigation
-import XCalendar
-import Colors
 import Color as SvgColor
+import Colors
 import Date exposing (Date)
 import DatePicker
 import Element exposing (..)
@@ -20,16 +18,19 @@ import Element.Region as Region
 import Html exposing (Html)
 import Html.Attributes
 import Http
-import Material.Icons.Maps exposing (directions_run, hotel)
-import Material.Icons.Content exposing (add)
+import Json.Decode
 import Material.Icons.Action exposing (check_circle)
 import Material.Icons.Alert exposing (error_outline)
+import Material.Icons.Content exposing (add)
+import Material.Icons.Maps exposing (directions_run, hotel)
 import RelativeDate
 import Svg exposing (Svg)
 import Task
 import Time
 import Urls
 import Util exposing (icon)
+import XCalendar
+
 
 type alias Model =
     { currentDate : Date
@@ -44,6 +45,7 @@ type alias Model =
     , showMenu : Bool
     }
 
+
 type WidgetModel
     = EventModel Event
     | EventListModel (List Event)
@@ -55,11 +57,16 @@ type WidgetModel
     | AboutModel
     | FlashMessageModel FlashMessage
     | LoginModel { email : String, password : String }
-    | NewUserModel { email : String, password : String, errors : List (String, Violation)  }
+    | NewUserModel { email : String, password : String, errors : List ( String, Violation ) }
 
-initLoginModel = { email = "", password = "" }
 
-initNewUserModel = { email = "", password = "", errors = [] }
+initLoginModel =
+    { email = "", password = "" }
+
+
+initNewUserModel =
+    { email = "", password = "", errors = [] }
+
 
 type Msg
     = NoOp
@@ -86,6 +93,7 @@ type Msg
     | UpdateEmail String
     | UpdatePassword String
 
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
@@ -93,17 +101,18 @@ update msg model =
             ( model, Cmd.none )
 
         ReceiveDate date ->
-            ( { model 
+            ( { model
                 | currentDate = date
-                , selectedDate = date 
+                , selectedDate = date
                 , pickerModel = DatePicker.setToday date model.pickerModel
-                , pickerDateText = 
+                , pickerDateText =
                     if model.pickerDateText == "" then
                         Date.format "Y-MM-dd" date
+
                     else
                         model.pickerDateText
               }
-            , Cmd.none 
+            , Cmd.none
             )
 
         DateSelected date ->
@@ -119,18 +128,18 @@ update msg model =
         UpdateEventDescription description ->
             case model.widget of
                 NewEventModel event ->
-                    ( { model 
-                        | widget = NewEventModel { event | description = description } 
+                    ( { model
+                        | widget = NewEventModel { event | description = description }
                         , flashMessage = Nothing
-                    }
+                      }
                     , Cmd.none
                     )
 
                 EditEventModel event ->
-                    ( { model 
-                        | widget = EditEventModel { event | description = description} 
+                    ( { model
+                        | widget = EditEventModel { event | description = description }
                         , flashMessage = Nothing
-                    }
+                      }
                     , Cmd.none
                     )
 
@@ -141,26 +150,31 @@ update msg model =
             case model.widget of
                 NewEventModel event ->
                     ( updateEventDate model event change, Cmd.none )
+
                 EditEventModel event ->
                     ( updateEventDate model event change, Cmd.none )
+
                 _ ->
                     ( model, Cmd.none )
+
         CreateEvent ->
             case model.widget of
                 NewEventModel event ->
                     ( { model | flashMessage = Nothing }
                     , Api.createEvent { event = event, dateText = model.pickerDateText }
-                            EventCreated
+                        EventCreated
                     )
+
                 _ ->
                     ( model, Cmd.none )
 
         EventCreated (Err e) ->
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         EventCreated (Ok event) ->
@@ -170,28 +184,32 @@ update msg model =
 
                 _ ->
                     ( { model | widget = NewEventModel event }
-                    , Cmd.none 
+                    , Cmd.none
                     )
+
         UpdateEvent ->
             case model.widget of
                 EditEventModel event ->
-                    ( model, Api.updateEvent { event = event, dateText =  model.pickerDateText } EventUpdated )
+                    ( model, Api.updateEvent { event = event, dateText = model.pickerDateText } EventUpdated )
+
                 _ ->
                     ( model, Cmd.none )
 
         EventUpdated (Err e) ->
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         EventUpdated (Ok event) ->
             case event.errors of
                 [] ->
                     ( model
-                    , Browser.Navigation.load <| Urls.showEvent event.id )
+                    , Browser.Navigation.load <| Urls.showEvent event.id
+                    )
 
                 _ ->
                     ( { model | widget = EditEventModel event }
@@ -205,10 +223,11 @@ update msg model =
 
         EventDeleted (Err e) ->
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         EventDeleted (Ok ()) ->
@@ -223,10 +242,11 @@ update msg model =
 
         LoggedOut (Err e) ->
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         LoggedOut (Ok _) ->
@@ -246,7 +266,7 @@ update msg model =
             ( { model | flashMessage = fm }
             , Cmd.none
             )
-    
+
         UpdateEmail newEmail ->
             case model.widget of
                 LoginModel data ->
@@ -273,6 +293,7 @@ update msg model =
                     ( { model | widget = NewUserModel { data | password = newPassword } }
                     , Cmd.none
                     )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -289,10 +310,11 @@ update msg model =
         LoggedIn (Err e) ->
             -- TODO: cuz of the redirect nonsense, this probably won't work
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         LoggedIn (Ok _) ->
@@ -313,10 +335,11 @@ update msg model =
         UserCreated (Err e) ->
             -- TODO: cuz of the redirect nonsense, this probably won't work
             let
-                errorMsg = httpErrorToString e
+                errorMsg =
+                    httpErrorToString e
             in
             ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
-            , Cmd.none 
+            , Cmd.none
             )
 
         UserCreated (Ok user) ->
@@ -332,6 +355,7 @@ update msg model =
                             ( { model | widget = NewUserModel { data | errors = user.errors } }
                             , Cmd.none
                             )
+
                         _ ->
                             ( { model | flashMessage = ErrorFlashMessage "Something unexpected happened. Please refresh the page." |> Just }
                             , Cmd.none
@@ -354,13 +378,15 @@ httpErrorToString e =
             "Error: Internet broke"
 
         Http.BadStatus i ->
-            "Error: BadStatus " ++ (String.fromInt i)
+            "Error: BadStatus " ++ String.fromInt i
+
 
 updateEventDate : Model -> Event -> DatePicker.ChangeEvent -> Model
 updateEventDate model event change =
     case change of
         DatePicker.DateChanged date ->
             updateEventDateAndClosePicker model event date
+
         DatePicker.PickerChanged subMsg ->
             { model | pickerModel = model.pickerModel |> DatePicker.update subMsg }
 
@@ -368,29 +394,33 @@ updateEventDate model event change =
             case parseDate newText of
                 Just date ->
                     updateEventDateAndClosePicker model event date
+
                 Nothing ->
                     { model | pickerDateText = newText }
+
 
 parseDate : String -> Maybe Date
 parseDate str =
     if String.length str < 10 then
         Nothing
+
     else
-        str 
+        str
             |> Date.fromIsoString
             |> Result.toMaybe
+
 
 updateEventDateAndClosePicker : Model -> Event -> Date -> Model
 updateEventDateAndClosePicker model event date =
     let
-        newEvent = 
-            { event 
+        newEvent =
+            { event
                 | year = Date.year date
                 , month = Date.monthNumber date
                 , day = Date.day date
             }
 
-        newWidget = 
+        newWidget =
             case model.widget of
                 NewEventModel _ ->
                     NewEventModel newEvent
@@ -413,86 +443,96 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     Sub.none
 
+
 view : Model -> Html Msg
 view model =
     let
-       (bgColor, fontColor) =
+        ( bgColor, fontColor ) =
             case model.useDarkMode of
                 True ->
-                    (Colors.black, Colors.white)
-                False ->
-                    (Colors.white, Colors.black)
+                    ( Colors.black, Colors.white )
 
-       options = 
-           case model.widget of
-               NavBarModel _ ->
-                   []
-               _ ->
-                   [ noStaticStyleSheet ]
+                False ->
+                    ( Colors.white, Colors.black )
+
+        options =
+            case model.widget of
+                NavBarModel _ ->
+                    []
+
+                _ ->
+                    [ noStaticStyleSheet ]
     in
     layoutWith { options = options }
-         [ nunito, Font.size 16, Background.color bgColor ] <|
-    case model.widget of 
-        ErrorModel m ->
-            paragraph [] [ text m ]
-        EventModel e ->
-            viewEvent e
-        NavBarModel context ->
-            navBar context model.showMenu
-        EventListModel events ->
-            viewHome
-                { eventsView = eventCards events
-                , innerMenu = changeViewLink "cal" 
-                , selectedDate = model.selectedDate
-                , events = events
-                , flashMessage = model.flashMessage
-                }
-        EventCalendarModel events ->
-            viewHome
-                { eventsView = eventCalendar 
-                    { events = events
-                    , currentDate = model.currentDate
+        [ nunito, Font.size 16, Background.color bgColor ]
+    <|
+        case model.widget of
+            ErrorModel m ->
+                paragraph [] [ text m ]
+
+            EventModel e ->
+                viewEvent e
+
+            NavBarModel context ->
+                navBar context model.showMenu
+
+            EventListModel events ->
+                viewHome
+                    { eventsView = eventCards events
+                    , innerMenu = changeViewLink "cal"
                     , selectedDate = model.selectedDate
-                    , monthIndex = model.monthIndex
-                    , useDarkMode = model.useDarkMode 
-                    , showLogEventModal = model.showLogEventModal
+                    , events = events
+                    , flashMessage = model.flashMessage
                     }
-                , innerMenu = changeViewLink "list" 
-                , selectedDate = model.selectedDate
-                , events = events
-                , flashMessage = model.flashMessage
-                }
-        NewEventModel event ->
-            eventForm 
-                { event = event
-                , pickerModel = model.pickerModel
-                , currentDate = model.currentDate
-                , pickerDateText = model.pickerDateText 
-                , onSave = CreateEvent
-                , deleteButton = Element.none
-                }
 
-        EditEventModel event ->
-            eventForm 
-                { event = event
-                , pickerModel = model.pickerModel
-                , currentDate = model.currentDate
-                , pickerDateText = model.pickerDateText 
-                , onSave = UpdateEvent
-                , deleteButton = deleteEventButton event
-                }
+            EventCalendarModel events ->
+                viewHome
+                    { eventsView =
+                        eventCalendar
+                            { events = events
+                            , currentDate = model.currentDate
+                            , selectedDate = model.selectedDate
+                            , monthIndex = model.monthIndex
+                            , useDarkMode = model.useDarkMode
+                            , showLogEventModal = model.showLogEventModal
+                            }
+                    , innerMenu = changeViewLink "list"
+                    , selectedDate = model.selectedDate
+                    , events = events
+                    , flashMessage = model.flashMessage
+                    }
 
-        AboutModel ->
-            AboutPage.view
+            NewEventModel event ->
+                eventForm
+                    { event = event
+                    , pickerModel = model.pickerModel
+                    , currentDate = model.currentDate
+                    , pickerDateText = model.pickerDateText
+                    , onSave = CreateEvent
+                    , deleteButton = Element.none
+                    }
 
-        FlashMessageModel flashMessage ->
-            viewFlashMessage flashMessage
+            EditEventModel event ->
+                eventForm
+                    { event = event
+                    , pickerModel = model.pickerModel
+                    , currentDate = model.currentDate
+                    , pickerDateText = model.pickerDateText
+                    , onSave = UpdateEvent
+                    , deleteButton = deleteEventButton event
+                    }
 
-        LoginModel data -> 
-            loginForm data
+            AboutModel ->
+                AboutPage.view
 
-        NewUserModel data ->
-            newUserForm data { flashMessage = model.flashMessage }
+            FlashMessageModel flashMessage ->
+                viewFlashMessage flashMessage
+
+            LoginModel data ->
+                loginForm data
+
+            NewUserModel data ->
+                newUserForm data { flashMessage = model.flashMessage }
 
 
 nunito : Attribute msg
@@ -502,13 +542,15 @@ nunito =
         , Font.serif
         ]
 
-viewHome : 
+
+viewHome :
     { eventsView : Element Msg
     , innerMenu : Element Msg
-    , selectedDate : Date 
+    , selectedDate : Date
     , events : List Event
     , flashMessage : Maybe FlashMessage
-    } -> Element Msg
+    }
+    -> Element Msg
 viewHome { eventsView, innerMenu, selectedDate, events, flashMessage } =
     column
         [ spacing 24
@@ -524,62 +566,66 @@ viewHome { eventsView, innerMenu, selectedDate, events, flashMessage } =
         , eventsView
         ]
 
+
 navBar : NavBarContext -> Bool -> Element Msg
-navBar { loggedIn } showMenu  =
+navBar { loggedIn } showMenu =
     let
         menu =
             if showMenu then
                 menuOptions loggedIn
+
             else
                 Element.none
     in
     column [ width fill ]
-    [ row 
-        [ width fill
-        , padding 16
-        , Background.color Colors.indigo
-        ]
-        [ link 
-            [ Region.heading 1
-            , Font.size 28
-            , centerX
-            , width fill
-            , Font.center
-            , Font.color Colors.white
-            , paddingEach { top = 0, left = 24, right = 0, bottom = 0 }
+        [ row
+            [ width fill
+            , padding 16
+            , Background.color Colors.indigo
             ]
-            { label = text "XcuseMe"
-            , url = Urls.root
-            }
-        , menuButton
+            [ link
+                [ Region.heading 1
+                , Font.size 28
+                , centerX
+                , width fill
+                , Font.center
+                , Font.color Colors.white
+                , paddingEach { top = 0, left = 24, right = 0, bottom = 0 }
+                ]
+                { label = text "XcuseMe"
+                , url = Urls.root
+                }
+            , menuButton
+            ]
+        , menu
         ]
-    , menu
-    ]
 
-menuButton :  Element Msg
+
+menuButton : Element Msg
 menuButton =
-     Input.button 
+    Input.button
         [ Font.size 28
         , Font.color Colors.white
         , alignRight
         , width (px 24)
-
         ]
         { label = text "⋮"
         , onPress = Just ToggleMenu
         }
 
+
 menuOptions : Bool -> Element Msg
 menuOptions loggedIn =
     let
         logoutButton : Element Msg
-        logoutButton = 
+        logoutButton =
             case loggedIn of
                 True ->
                     Input.button menuItemAttrs
-                        { label = text "Logout" 
+                        { label = text "Logout"
                         , onPress = Just Logout
                         }
+
                 False ->
                     Element.none
     in
@@ -592,9 +638,10 @@ menuOptions loggedIn =
         ]
     <|
         borderBetween Colors.white
-           [ link menuItemAttrs { url = Urls.about, label = text "About"}
-           , logoutButton
-           ] 
+            [ link menuItemAttrs { url = Urls.about, label = text "About" }
+            , logoutButton
+            ]
+
 
 menuItemAttrs : List (Attribute Msg)
 menuItemAttrs =
@@ -602,6 +649,7 @@ menuItemAttrs =
     , Font.alignRight
     , width fill
     ]
+
 
 borderBetween : Color -> List (Element msg) -> List (Element msg)
 borderBetween color elements =
@@ -613,14 +661,14 @@ borderBetween color elements =
             [ element ]
 
         element :: rest ->
-            el 
+            el
                 [ Border.widthEach { top = 0, left = 0, right = 0, bottom = 1 }
-                , width fill 
-                , Border.color color 
+                , width fill
+                , Border.color color
                 ]
                 element
                 :: borderBetween color rest
-        
+
 
 logEventButton : EventType -> Date -> List Event -> Element Msg
 logEventButton eventType selectedDate events =
@@ -628,8 +676,10 @@ logEventButton eventType selectedDate events =
     let
         eventTypeString =
             eventType |> eventTypeToString |> firstCharToUpper
+
         url =
             Urls.newEvent { eventType = eventTypeString, date = selectedDate }
+
         color =
             eventTypeToColor eventType
 
@@ -644,22 +694,28 @@ logEventButton eventType selectedDate events =
                 { label = text <| (++) "Log " eventTypeString
                 , url = url
                 }
+
         Just _ ->
             Input.button
                 (fullWidthButtonAttrs Colors.lightGray)
                 { label = text <| (++) "Log " eventTypeString
-                , onPress = 
+                , onPress =
                     ErrorFlashMessage "You can log only one exercise or excuse per day"
-                    |> Just |> SetFlashMessage |> Just 
+                        |> Just
+                        |> SetFlashMessage
+                        |> Just
                 }
+
 
 eventTypeToString : EventType -> String
 eventTypeToString eventType =
     case eventType of
         Exercise ->
             "exercise"
+
         Excuse ->
             "excuse"
+
 
 fullWidthButtonAttrs : Color -> List (Attribute Msg)
 fullWidthButtonAttrs color =
@@ -672,55 +728,64 @@ fullWidthButtonAttrs color =
     , Font.center
     ]
 
+
 eventTypeToLighterColor : EventType -> Color
 eventTypeToLighterColor eventType =
-   case eventType of
-       Exercise ->
-           Colors.tealLighter
-       Excuse ->
-           Colors.redLighter
+    case eventType of
+        Exercise ->
+            Colors.tealLighter
 
+        Excuse ->
+            Colors.redLighter
 
 
 eventTypeToColor : EventType -> Color
 eventTypeToColor eventType =
-   case eventType of
-       Exercise ->
-           Colors.teal
-       Excuse ->
-           Colors.red
+    case eventType of
+        Exercise ->
+            Colors.teal
+
+        Excuse ->
+            Colors.red
+
 
 logEventButtonForModal : EventType -> Date -> List (Attribute Msg) -> Element Msg
 logEventButtonForModal eventType selectedDate borderAttrs =
     let
         eventTypeString =
             eventType |> eventTypeToString |> firstCharToUpper
+
         url =
             Urls.newEvent { eventType = eventTypeString, date = selectedDate }
+
         color =
             eventTypeToColor eventType
     in
     link
         ([ Font.color color
-        , Background.color Colors.white
-        , width fill
-        , Font.center
-        , centerX
-        , paddingXY 0 12
-        ] ++ borderAttrs)
+         , Background.color Colors.white
+         , width fill
+         , Font.center
+         , centerX
+         , paddingXY 0 12
+         ]
+            ++ borderAttrs
+        )
         { label = text <| (++) "Log " eventTypeString
         , url = url
         }
 
+
 changeViewLink : String -> Element Msg
 changeViewLink mode =
     let
-        url = 
+        url =
             Urls.events mode
-        lbl = 
+
+        lbl =
             "view " ++ mode
     in
-    row 
+    row
         [ width fill
         , paddingEach { left = 0, right = 24, top = 0, bottom = 0 }
         ]
@@ -728,25 +793,28 @@ changeViewLink mode =
             [ alignRight
             , htmlAttribute <| Html.Attributes.attribute "data-turbolinks-preload" "false"
             ]
-            { url = url 
-            , label = 
+            { url = url
+            , label =
                 el
                     [ Font.color Colors.blue
                     , Font.underline
                     , Font.size 14
                     ]
-                <| text lbl
-        
+                <|
+                    text lbl
             }
         ]
+
 
 viewEvent : Event -> Element Msg
 viewEvent event =
     let
-        title = 
+        title =
             event.eventType |> eventTypeToString |> firstCharToUpper
-        fontColor = 
+
+        fontColor =
             event.eventType |> eventTypeToColor
+
         titleEl =
             el
                 [ Region.heading 2
@@ -761,7 +829,7 @@ viewEvent event =
                 ]
                 { label = el [] <| text "edit"
                 , url = Urls.editEvent event.id
-                } 
+                }
     in
     column
         [ spacing 12
@@ -773,14 +841,16 @@ viewEvent event =
         , paragraph [ Font.size 14 ] [ text event.description ]
         ]
 
-eventCalendar : 
-    { events: List Event
+
+eventCalendar :
+    { events : List Event
     , currentDate : Date
     , selectedDate : Date
     , monthIndex : Int
-    , useDarkMode : Bool 
+    , useDarkMode : Bool
     , showLogEventModal : Bool
-    } -> Element Msg
+    }
+    -> Element Msg
 eventCalendar { monthIndex, currentDate, selectedDate, events, showLogEventModal, useDarkMode } =
     let
         selectedEvent =
@@ -790,7 +860,7 @@ eventCalendar { monthIndex, currentDate, selectedDate, events, showLogEventModal
         [ width fill
         , spacing 6
         ]
-        [ XCalendar.view 
+        [ XCalendar.view
             { currentDate = currentDate
             , monthIndex = monthIndex
             , selectedDate = selectedDate
@@ -802,22 +872,27 @@ eventCalendar { monthIndex, currentDate, selectedDate, events, showLogEventModal
         , calendarCard selectedEvent showLogEventModal selectedDate
         ]
 
-calendarCellColors : 
-    List Event -> 
-    { currentDate : Date
-    , date :  Date
-    , selectedDate : Date 
-    , dayDisplay : String
-    } -> { backgroundColor : Maybe Color, fontColor : Color }
+
+calendarCellColors :
+    List Event
+    ->
+        { currentDate : Date
+        , date : Date
+        , selectedDate : Date
+        , dayDisplay : String
+        }
+    -> { backgroundColor : Maybe Color, fontColor : Color }
 calendarCellColors events { currentDate, date, selectedDate, dayDisplay } =
     let
-        maybeEvent = eventForDay events date
+        maybeEvent =
+            eventForDay events date
+
         isFutureDate =
             Date.compare currentDate date == LT
 
         fontColorDefault =
             case ( isFutureDate, dayDisplay ) of
-                (True, _) ->
+                ( True, _ ) ->
                     Colors.mediumGray
 
                 ( _, "  " ) ->
@@ -830,20 +905,24 @@ calendarCellColors events { currentDate, date, selectedDate, dayDisplay } =
         { backgroundColor = Just Colors.blue
         , fontColor = Colors.white
         }
+
     else
-        case (currentDate == date, maybeEvent) of
-            (True, _) ->
+        case ( currentDate == date, maybeEvent ) of
+            ( True, _ ) ->
                 { backgroundColor = Just Colors.blueLighter
                 , fontColor = Colors.white
                 }
-            (False, Nothing) ->
+
+            ( False, Nothing ) ->
                 { backgroundColor = Nothing
                 , fontColor = fontColorDefault
                 }
-            (False, Just e) ->
+
+            ( False, Just e ) ->
                 { backgroundColor = e.eventType |> eventTypeToLighterColor |> Just
                 , fontColor = fontColorDefault
                 }
+
 
 calendarCard : Maybe Event -> Bool -> Date -> Element Msg
 calendarCard maybeEvent showLogEventModal selectedDate =
@@ -858,40 +937,46 @@ calendarCard maybeEvent showLogEventModal selectedDate =
 
                         False ->
                             []
-
             in
             el
                 ([ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] ++ modalAttrs)
-                <| card 
+            <|
+                card
                     { action = Button (Just ToggleLogEventModal)
                     , lead = icon add Colors.lightGray 24
-                    , labelText = "Nothing logged for selected day" 
+                    , labelText = "Nothing logged for selected day"
                     }
+
         Just e ->
-            el [ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] 
-                <| eventCard e
+            el [ width fill, Border.widthXY 0 1, Border.color Colors.lightGray ] <|
+                eventCard e
+
 
 logEventModal : Date -> Element Msg
 logEventModal selectedDate =
     column
         [ width fill ]
-        [ logEventButtonForModal Exercise selectedDate 
+        [ logEventButtonForModal Exercise
+            selectedDate
             [ Border.widthEach { top = 0, bottom = 1, left = 0, right = 0 }
-            , Border.color Colors.gray 
+            , Border.color Colors.gray
             ]
         , logEventButtonForModal Excuse selectedDate []
         ]
+
 
 eventForDay : List Event -> Date -> Maybe Event
 eventForDay events date =
     case List.filter (isEventOnDate date) events of
         [] ->
             Nothing
+
         [ event ] ->
             Just event
-        
+
         event :: others ->
             Just event
+
 
 isEventOnDate : Date -> Event -> Bool
 isEventOnDate date { year, month, day } =
@@ -904,6 +989,7 @@ eventCards events =
         [] ->
             paragraph [ Font.center, Font.italic, width fill ]
                 [ text "Nothing logged yet" ]
+
         _ ->
             column
                 [ width fill
@@ -911,44 +997,50 @@ eventCards events =
                 , height <| minimum 400 <| fill
                 ]
             <|
-                borderBetween Colors.lightGray <| List.map eventCard events
+                borderBetween Colors.lightGray <|
+                    List.map eventCard events
+
 
 eventCard : Event -> Element Msg
 eventCard event =
-    let 
-        txt : String 
-        txt = (Date.format "M/d" <| eventToDate event)
+    let
+        txt : String
+        txt =
+            (Date.format "M/d" <| eventToDate event)
                 ++ " - "
                 ++ event.description
-        url : String 
-        url = 
+
+        url : String
+        url =
             Urls.showEvent event.id
 
-        (iconF, iconColor) =
+        ( iconF, iconColor ) =
             case event.eventType of
                 Exercise ->
                     ( directions_run, Colors.teal )
 
                 Excuse ->
                     ( hotel, Colors.red )
-
     in
     card { lead = icon iconF iconColor 24, labelText = txt, action = Link url }
+
 
 type CardAction
     = Link String
     | Button (Maybe Msg)
 
 
-card : { lead: Element Msg, labelText : String, action : CardAction } -> Element Msg
+card : { lead : Element Msg, labelText : String, action : CardAction } -> Element Msg
 card { lead, labelText, action } =
     let
-        maxLength = 35
+        maxLength =
+            35
 
         truncatedText =
             case String.length labelText > maxLength of
                 False ->
                     labelText
+
                 True ->
                     String.left (maxLength - 3) labelText ++ "..."
 
@@ -970,6 +1062,7 @@ card { lead, labelText, action } =
                 { label = label
                 , url = url
                 }
+
         Button onPress ->
             Input.button
                 [ width fill ]
@@ -977,31 +1070,36 @@ card { lead, labelText, action } =
                 , onPress = onPress
                 }
 
-eventForm : 
+
+eventForm :
     { event : Event
     , pickerModel : DatePicker.Model
     , currentDate : Date
-    , pickerDateText : String 
+    , pickerDateText : String
     , onSave : Msg
     , deleteButton : Element Msg
-    } -> Element Msg
+    }
+    -> Element Msg
 eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButton } =
     let
         defaultSettings =
             DatePicker.defaultSettings
+
         datePickerSettings =
             { defaultSettings
                 | disabled = \day -> Date.compare currentDate day == LT
                 , firstDayOfWeek = Time.Sun
             }
-        (eventTypeStr, saveButtonColor) =
+
+        ( eventTypeStr, saveButtonColor ) =
             case event.eventType of
                 Excuse ->
-                    ("Excuse", Colors.red )
+                    ( "Excuse", Colors.red )
+
                 Exercise ->
-                    ("Exercise", Colors.teal )
-        
-        descriptionError = 
+                    ( "Exercise", Colors.teal )
+
+        descriptionError =
             errorMessageForField event.errors "description"
 
         dateError =
@@ -1037,7 +1135,7 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
             , spellcheck = False
             }
         , formError descriptionError
-        , row 
+        , row
             [ spacing 12
             , width fill
             ]
@@ -1066,16 +1164,19 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
             ]
         ]
 
+
 relativeDateInfo : { dateText : String, currentDate : Date } -> Element Msg
 relativeDateInfo { dateText, currentDate } =
     case parseDate dateText of
         Nothing ->
             Element.none
+
         Just date ->
             RelativeDate.toString { today = currentDate, other = date }
                 |> text
                 |> List.singleton
                 |> paragraph [ Font.italic, Font.size 14 ]
+
 
 loginForm : { email : String, password : String } -> Element Msg
 loginForm { email, password } =
@@ -1129,12 +1230,14 @@ loginForm { email, password } =
             ]
         ]
 
-newUserForm : { email : String, password : String, errors : List (String, Violation) } -> 
-    { flashMessage : Maybe FlashMessage } ->
-    Element Msg
+
+newUserForm :
+    { email : String, password : String, errors : List ( String, Violation ) }
+    -> { flashMessage : Maybe FlashMessage }
+    -> Element Msg
 newUserForm { email, password, errors } { flashMessage } =
     let
-        emailError = 
+        emailError =
             errorMessageForField errors "email"
 
         passwordError =
@@ -1172,7 +1275,7 @@ newUserForm { email, password, errors } { flashMessage } =
             { label = text "Create Account"
             , onPress = Just CreateUser
             }
-        , column 
+        , column
             [ spacing 14 ]
             [ paragraph
                 [ Font.size 14 ]
@@ -1208,40 +1311,47 @@ deleteEventButton event =
         , onPress = event |> DeleteEvent |> Just
         }
 
-errorMessageForField : List (String, Violation) -> String -> Maybe String
+
+errorMessageForField : List ( String, Violation ) -> String -> Maybe String
 errorMessageForField errors field =
     errors
-        |> List.filter (\(f, violation) -> f == field)
+        |> List.filter (\( f, violation ) -> f == field)
         |> List.head
-        |> Maybe.map 
-            (\(fieldName, violation) ->
+        |> Maybe.map
+            (\( fieldName, violation ) ->
                 case violation of
-                    TextViolation { message } -> message
-                    HtmlViolation { message } -> message
+                    TextViolation { message } ->
+                        message
+
+                    HtmlViolation { message } ->
+                        message
             )
+
 
 formError : Maybe String -> Element Msg
 formError maybeError =
     case maybeError of
-      Nothing ->
-          Element.none
-      
-      Just message  ->
-          if String.startsWith "non_unique_date" message then
-            nonUniqueDateMessage message
-          else
-            paragraph 
-                [ Font.italic
-                , Font.color Colors.darkRed
-                ]
-                [ text message ]
+        Nothing ->
+            Element.none
+
+        Just message ->
+            if String.startsWith "non_unique_date" message then
+                nonUniqueDateMessage message
+
+            else
+                paragraph
+                    [ Font.italic
+                    , Font.color Colors.darkRed
+                    ]
+                    [ text message ]
+
 
 nonUniqueDateMessage : String -> Element Msg
 nonUniqueDateMessage message =
     let
         eventId : String
         eventId =
-            message 
+            message
                 |> String.dropLeft (String.length "non_unique_date:")
     in
     paragraph
@@ -1262,15 +1372,15 @@ nonUniqueDateMessage message =
 viewFlashMessage : FlashMessage -> Element Msg
 viewFlashMessage flashMessage =
     let
-        (message, color) =
+        ( message, color ) =
             case flashMessage of
                 SuccessFlashMessage m ->
-                    (m, Colors.success)
+                    ( m, Colors.success )
 
                 ErrorFlashMessage m ->
-                    (m, Colors.error)
-        
-        iconFunction = 
+                    ( m, Colors.error )
+
+        iconFunction =
             case flashMessage of
                 SuccessFlashMessage _ ->
                     check_circle
@@ -1280,7 +1390,7 @@ viewFlashMessage flashMessage =
     in
     el
         [ paddingXY 24 12 ]
-        <|
+    <|
         row
             [ Border.width 2
             , Border.color color
@@ -1288,9 +1398,10 @@ viewFlashMessage flashMessage =
             , paddingXY 12 6
             , spacing 12
             ]
-            [ icon iconFunction color 24 
+            [ icon iconFunction color 24
             , paragraph [] [ text message ]
             ]
+
 
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
@@ -1303,19 +1414,23 @@ eventToDate { year, month, day } =
 
 -- MAIN
 
+
 main : Program Json.Decode.Value Model Msg
 main =
-    Browser.element 
+    Browser.element
         { init = init
         , update = update
         , subscriptions = subscriptions
         , view = view
         }
 
+
 init : Json.Decode.Value -> ( Model, Cmd Msg )
 init flags =
     let
-        widget = initialWidgetModel flags
+        widget =
+            initialWidgetModel flags
+
         pickerDateText =
             case widget of
                 NewEventModel event ->
@@ -1323,6 +1438,7 @@ init flags =
 
                 EditEventModel event ->
                     Date.format "Y-MM-dd" <| eventToDate event
+
                 _ ->
                     ""
     in
@@ -1340,49 +1456,62 @@ init flags =
     , Date.today |> Task.perform ReceiveDate
     )
 
+
 initialWidgetModel : Json.Decode.Value -> WidgetModel
 initialWidgetModel flags =
     case Json.Decode.decodeValue widgetDecoder flags of
         Ok widget ->
             widgetFlagToModel widget
+
         Err error ->
             ErrorModel (Json.Decode.errorToString error)
+
 
 decodeExtra : Json.Decode.Value -> { useDarkMode : Bool }
 decodeExtra flags =
     case Json.Decode.decodeValue (Json.Decode.field "useDarkMode" Json.Decode.bool) flags of
         Ok v ->
             { useDarkMode = v }
+
         Err error ->
             { useDarkMode = False }
+
 
 widgetFlagToModel : Widget -> WidgetModel
 widgetFlagToModel widget =
     case widget of
         EventWidget event ->
             EventModel event
+
         EventListWidget events ->
             EventListModel events
+
         EventCalendarWidget events ->
             EventCalendarModel events
+
         NavBarWidget context ->
             NavBarModel context
+
         NewEventWidget event ->
             NewEventModel event
+
         EditEventWidget event ->
             EditEventModel event
+
         AboutWidget ->
             AboutModel
+
         FlashMessageWidget flashMessage ->
             FlashMessageModel flashMessage
+
         LoginWidget ->
             LoginModel initLoginModel
+
         NewUserWidget ->
             NewUserModel initNewUserModel
 
 
-
 firstCharToUpper : String -> String
 firstCharToUpper s =
-    (s |> String.left 1 |> String.toUpper) ++
-    (s |> String.dropLeft 1)
+    (s |> String.left 1 |> String.toUpper)
+        ++ (s |> String.dropLeft 1)

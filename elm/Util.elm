@@ -1,8 +1,9 @@
 module Util exposing (icon)
 
 import Color as SvgColor
-import Svg exposing (Svg)
 import Element exposing (..)
+import Svg exposing (Svg)
+
 
 icon : (SvgColor.Color -> Int -> Svg msg) -> Color -> Int -> Element msg
 icon iconF color size =
@@ -12,6 +13,7 @@ icon iconF color size =
                 []
                 [ iconF (elementColorToSvgColor color) size ]
 
+
 elementColorToSvgColor : Color -> SvgColor.Color
-elementColorToSvgColor = 
-    toRgb >> SvgColor.fromRgba 
+elementColorToSvgColor =
+    toRgb >> SvgColor.fromRgba
