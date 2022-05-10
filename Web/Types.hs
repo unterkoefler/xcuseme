@@ -41,3 +41,7 @@ data EventsController
 data AboutController
     = AboutAction
     deriving (Eq, Show, Data)
+
+data StatsController
+    = StatsAction
+    deriving (Eq, Show, Data)

@@ -11,12 +11,14 @@ import Web.Controller.About
 import Web.Controller.Events
 import Web.Controller.Static
 import Web.Controller.User
+import Web.Controller.Stats
 
 instance FrontController WebApplication where
     controllers =
         [ startPage (EventsAction "cal")
         , parseRoute @SessionsController
         , parseRoute @UserController
+        , parseRoute @StatsController
         -- Generator Marker
         , parseRoute @AboutController
         , parseRoute @EventsController
