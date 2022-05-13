@@ -22,13 +22,15 @@
             "fabhof/elm-ui-datepicker": "4.0.0",
             "justinmimbs/date": "3.2.1",
             "mdgriffith/elm-ui": "1.1.8",
+            "munksgaard/elm-charts": "1.0.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4"
         },
         "indirect": {
             "elm/bytes": "1.0.8",
             "elm/file": "1.0.5",
             "elm/parser": "1.1.0",
-            "elm/virtual-dom": "1.0.2"
+            "elm/virtual-dom": "1.0.2",
+            "elm-community/basics-extra": "4.1.0"
         }
     },
     "test-dependencies": {

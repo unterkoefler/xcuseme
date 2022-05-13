@@ -2,6 +2,7 @@
 
 module Web.JsonTypes where
 
+import Web.Types
 import Generated.Types
 import IHP.Prelude
 import qualified Data.Aeson as Aeson
@@ -15,6 +16,25 @@ import Data.Char(toLower)
 
 -- JSON serializable types and functions
 -- -- for exposing IHP data to Elm and JSON responses
+
+deriving instance Generic Statistics
+deriving instance SOP.Generic Statistics
+deriving instance SOP.HasDatatypeInfo Statistics
+deriving instance Aeson.ToJSON Statistics
+deriving instance Aeson.FromJSON Statistics
+
+instance HasElmType Statistics where
+    elmDefinition =
+        Just $ deriveElmTypeDefinition @Statistics defaultOptions "Api.Generated.Statistics"
+
+instance HasElmDecoder Aeson.Value Statistics where
+    elmDecoderDefinition =
+        Just $ deriveElmJSONDecoder @Statistics defaultOptions Aeson.defaultOptions "Api.Generated.statisticsController"
+
+instance HasElmEncoder Aeson.Value Statistics where
+    elmEncoderDefinition =
+        Just $ deriveElmJSONEncoder @Statistics defaultOptions Aeson.defaultOptions "Api.Generated.statisticsEncoder"
+
 
 deriving instance Generic EventType
 deriving instance SOP.Generic EventType

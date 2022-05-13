@@ -12,6 +12,7 @@ module Urls exposing
     , newUser
     , root
     , showEvent
+    , stats
     , updateEvent
     )
 
@@ -27,6 +28,11 @@ root =
 about : String
 about =
     Url.Builder.absolute [ "About" ] []
+
+
+stats : String
+stats =
+    Url.Builder.absolute [ "Stats" ] []
 
 
 deleteSession : String

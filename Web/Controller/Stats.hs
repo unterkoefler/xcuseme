@@ -13,7 +13,8 @@ instance Controller StatsController where
         let excuseCount = numExcuses events
         let exerciseCount = numExercises events
         let currentExerciseStreak = currentExerciseStreakF events
-        render IndexView { .. }
+        let longestExerciseStreak = longestExerciseStreakF events
+        render IndexView { stats = Statistics { .. } }
 
 numExcuses :: [Event] -> Int
 numExcuses =
@@ -21,7 +22,22 @@ numExcuses =
 
 numExercises :: [Event] -> Int
 numExercises =
-    length . filter (\e -> Generated.Types.eventType e == Exercise)
+    length . filterExercises
+
+longestExerciseStreakF :: [Event] -> Int
+longestExerciseStreakF events = longestStreak (filterExercises events) 0 0 Nothing
+
+longestStreak :: [Event] -> Int -> Int -> Maybe Event -> Int
+longestStreak [] maxStreak _ _ = maxStreak
+longestStreak (head:tail) maxStreak currentStreak maybeLaterEvent =
+    let
+        newStreak = case fmap (\e -> diffDays (date e) (date head)) maybeLaterEvent of
+            Just 1 ->
+                1 + currentStreak
+            _ ->
+                1
+    in
+        longestStreak tail (max maxStreak newStreak) newStreak (Just head)
 
 currentExerciseStreakF :: [Event] -> Int
 currentExerciseStreakF [] = 0
@@ -29,9 +45,7 @@ currentExerciseStreakF events@(head:rest) =
     if Generated.Types.eventType head == Excuse then
         0
     else
-        let exercises = filter (\e -> Generated.Types.eventType e == Exercise) events
-        in
-        currentStreak exercises
+        currentStreak . filterExercises $ events
 
 currentStreak :: [Event] -> Int
 currentStreak [] = 0
@@ -41,3 +55,7 @@ currentStreak (first:second:rest) =
         1 + currentStreak (second:rest)
     else
         1
+
+filterExercises :: [Event] -> [Event]
+filterExercises =
+    filter (\e -> Generated.Types.eventType e == Exercise)

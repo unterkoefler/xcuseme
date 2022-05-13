@@ -8,6 +8,7 @@ module Application.Helper.View (
     newEventWidget,
     editEventWidget,
     aboutWidget,
+    statsWidget,
     flashMessageWidget,
     loginWidget,
     newUserWidget,
@@ -25,6 +26,7 @@ import qualified Generics.SOP as SOP
 import GHC.Generics
 import Language.Haskell.To.Elm
 import Application.Lib.DerivingViaElm ( ElmType(..) )
+import Web.Types
 
 data Widget
     = EventWidget EventJSON
@@ -34,6 +36,7 @@ data Widget
     | NewEventWidget EventJSON
     | EditEventWidget EventJSON
     | AboutWidget
+    | StatsWidget Statistics
     | LoginWidget
     | NewUserWidget
     | FlashMessageWidget FlashMessage
@@ -126,6 +129,10 @@ navBarWidget =
 
 aboutWidget :: Html
 aboutWidget = widgetToHtml AboutWidget
+
+statsWidget :: Statistics -> Html
+statsWidget =
+    widgetToHtml . StatsWidget
 
 flashMessageWidget :: FlashMessage -> Html
 flashMessageWidget =

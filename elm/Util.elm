@@ -1,4 +1,4 @@
-module Util exposing (icon)
+module Util exposing (elementColorToString, icon)
 
 import Color as SvgColor
 import Element exposing (..)
@@ -17,3 +17,8 @@ icon iconF color size =
 elementColorToSvgColor : Color -> SvgColor.Color
 elementColorToSvgColor =
     toRgb >> SvgColor.fromRgba
+
+
+elementColorToString : Color -> String
+elementColorToString =
+    elementColorToSvgColor >> SvgColor.toCssString

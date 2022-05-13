@@ -2,9 +2,22 @@ module Main exposing (main)
 
 import AboutPage
 import Api
-import Api.Generated exposing (Event, EventType(..), FlashMessage(..), NavBarContext, User, Violation(..), Widget(..), eventDecoder, widgetDecoder)
+import Api.Generated
+    exposing
+        ( Event
+        , EventType(..)
+        , FlashMessage(..)
+        , NavBarContext
+        , Statistics
+        , User
+        , Violation(..)
+        , Widget(..)
+        , eventDecoder
+        , widgetDecoder
+        )
 import Browser
 import Browser.Navigation
+import Chart
 import Color as SvgColor
 import Colors
 import Date exposing (Date)
@@ -55,6 +68,7 @@ type WidgetModel
     | NewEventModel Event
     | EditEventModel Event
     | AboutModel
+    | StatsModel Statistics
     | FlashMessageModel FlashMessage
     | LoginModel { email : String, password : String }
     | NewUserModel { email : String, password : String, errors : List ( String, Violation ) }
@@ -525,6 +539,9 @@ view model =
             AboutModel ->
                 AboutPage.view
 
+            StatsModel statistics ->
+                viewStats statistics
+
             FlashMessageModel flashMessage ->
                 viewFlashMessage flashMessage
 
@@ -639,6 +656,7 @@ menuOptions loggedIn =
     <|
         borderBetween Colors.white
             [ link menuItemAttrs { url = Urls.about, label = text "About" }
+            , link menuItemAttrs { url = Urls.stats, label = text "Stats" }
             , logoutButton
             ]
 
@@ -1403,6 +1421,38 @@ viewFlashMessage flashMessage =
             ]
 
 
+viewStats : Statistics -> Element Msg
+viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseStreak } =
+    let
+        pieData : List ( Float, String )
+        pieData =
+            [ ( toFloat exerciseCount, "Exercises -" )
+            , ( toFloat excuseCount, "Excuses -" )
+            ]
+
+        pieColors : List String
+        pieColors =
+            List.map Util.elementColorToString
+                [ Colors.teal
+                , Colors.red
+                ]
+    in
+    column
+        [ spacing 14
+        , paddingXY 20 0
+        ]
+        [ paragraph [ Region.heading 2, Font.size 24 ] [ text "All time statistics" ]
+        , paragraph [] [ text <| "Current exercise streak: " ++ String.fromInt currentExerciseStreak ]
+        , paragraph [] [ text <| "Longest exercise streak: " ++ String.fromInt longestExerciseStreak ]
+        , Chart.pie pieData
+            |> Chart.colors pieColors
+            |> Chart.addValueToLabel
+            |> Chart.updateStyles "container" [ ( "background-color", "white" ) ]
+            |> Chart.toHtml
+            |> Element.html
+        ]
+
+
 eventToDate : Event -> Date
 eventToDate { year, month, day } =
     Date.fromCalendarDate
@@ -1500,6 +1550,9 @@ widgetFlagToModel widget =
 
         AboutWidget ->
             AboutModel
+
+        StatsWidget stats ->
+            StatsModel stats
 
         FlashMessageWidget flashMessage ->
             FlashMessageModel flashMessage

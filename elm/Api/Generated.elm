@@ -3,6 +3,7 @@ module Api.Generated exposing
     , EventType(..)
     , FlashMessage(..)
     , NavBarContext
+    , Statistics
     , User
     , Violation(..)
     , Widget(..)
@@ -14,6 +15,8 @@ module Api.Generated exposing
     , flashMessageEncoder
     , navBarContextDecoder
     , navBarContextEncoder
+    , statisticsController
+    , statisticsEncoder
     , userDecoder
     , userEncoder
     , violationDecoder
@@ -35,6 +38,7 @@ type Widget
     | NewEventWidget Event
     | EditEventWidget Event
     | AboutWidget
+    | StatsWidget Statistics
     | LoginWidget
     | NewUserWidget
     | FlashMessageWidget FlashMessage
@@ -82,6 +86,12 @@ widgetEncoder a =
         AboutWidget ->
             Json.Encode.object [ ( "tag", Json.Encode.string "AboutWidget" ) ]
 
+        StatsWidget b ->
+            Json.Encode.object
+                [ ( "tag", Json.Encode.string "StatsWidget" )
+                , ( "contents", statisticsEncoder b )
+                ]
+
         LoginWidget ->
             Json.Encode.object [ ( "tag", Json.Encode.string "LoginWidget" ) ]
 
@@ -127,6 +137,10 @@ widgetDecoder =
 
                     "AboutWidget" ->
                         Json.Decode.succeed AboutWidget
+
+                    "StatsWidget" ->
+                        Json.Decode.succeed StatsWidget
+                            |> Json.Decode.Pipeline.required "contents" statisticsController
 
                     "LoginWidget" ->
                         Json.Decode.succeed LoginWidget
@@ -347,3 +361,30 @@ userDecoder : Json.Decode.Decoder User
 userDecoder =
     Json.Decode.succeed User
         |> Json.Decode.Pipeline.required "errors" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 violationDecoder)))
+
+
+type alias Statistics =
+    { excuseCount : Int
+    , exerciseCount : Int
+    , currentExerciseStreak : Int
+    , longestExerciseStreak : Int
+    }
+
+
+statisticsEncoder : Statistics -> Json.Encode.Value
+statisticsEncoder a =
+    Json.Encode.object
+        [ ( "excuseCount", Json.Encode.int a.excuseCount )
+        , ( "exerciseCount", Json.Encode.int a.exerciseCount )
+        , ( "currentExerciseStreak", Json.Encode.int a.currentExerciseStreak )
+        , ( "longestExerciseStreak", Json.Encode.int a.longestExerciseStreak )
+        ]
+
+
+statisticsController : Json.Decode.Decoder Statistics
+statisticsController =
+    Json.Decode.succeed Statistics
+        |> Json.Decode.Pipeline.required "excuseCount" Json.Decode.int
+        |> Json.Decode.Pipeline.required "exerciseCount" Json.Decode.int
+        |> Json.Decode.Pipeline.required "currentExerciseStreak" Json.Decode.int
+        |> Json.Decode.Pipeline.required "longestExerciseStreak" Json.Decode.int

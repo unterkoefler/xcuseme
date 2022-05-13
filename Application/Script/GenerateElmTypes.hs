@@ -10,6 +10,7 @@ import qualified Language.Elm.Simplification as Simplification
 import Language.Haskell.To.Elm
 import qualified System.Directory as Directory
 import Web.JsonTypes
+import Web.Types
 
 run :: Script
 run = do
@@ -28,5 +29,6 @@ run = do
                 <> jsonDefinitions @Violation
                 <> jsonDefinitions @FlashMessage
                 <> jsonDefinitions @UserJSON
+                <> jsonDefinitions @Statistics
 
     modules = Pretty.modules definitions

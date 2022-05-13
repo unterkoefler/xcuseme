@@ -43,3 +43,10 @@ data AboutController
 data StatsController
     = StatsAction
     deriving (Eq, Show, Data)
+
+data Statistics = Statistics {
+    excuseCount :: Int,
+    exerciseCount :: Int,
+    currentExerciseStreak :: Int,
+    longestExerciseStreak :: Int
+}
