@@ -4,6 +4,4 @@ import Web.View.Prelude
 data ListView = ListView { events :: [ Event ]  }
 
 instance View ListView where
-    html ListView { .. } = [hsx|
-        {eventListWidget events}
-    |]
+    html ListView { .. } = eventListWidget events

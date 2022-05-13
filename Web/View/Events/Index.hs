@@ -4,6 +4,4 @@ import Web.View.Prelude
 data IndexView = IndexView { events :: [ Event ]  }
 
 instance View IndexView where
-    html IndexView { .. } = [hsx|
-        {eventCalendarWidget events}
-    |]
+    html IndexView { .. } = eventCalendarWidget events

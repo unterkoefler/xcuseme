@@ -6,9 +6,7 @@ import Web.JsonTypes
 data NewView = NewView { event :: Event }
 
 instance View NewView where
-    html NewView { .. } = [hsx|
-        {newEventWidget event}
-    |]
+    html NewView { .. } = newEventWidget event
 
     json NewView { .. } = toJSON $ eventToJSON event
 

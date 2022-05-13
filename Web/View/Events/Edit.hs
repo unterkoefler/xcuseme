@@ -6,9 +6,7 @@ import Web.JsonTypes
 data EditView = EditView { event :: Event }
 
 instance View EditView where
-    html EditView { .. } = [hsx|
-        {editEventWidget event}
-    |]
+    html EditView { .. } = editEventWidget event
 
     json EditView { .. } = toJSON $ eventToJSON event
 

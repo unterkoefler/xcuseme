@@ -9,7 +9,6 @@ import Web.View.Layout (defaultLayout)
 -- Controller Imports
 import Web.Controller.About
 import Web.Controller.Events
-import Web.Controller.Static
 import Web.Controller.User
 import Web.Controller.Stats
 

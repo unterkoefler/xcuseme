@@ -4,7 +4,4 @@ import Web.View.Prelude
 data ShowView = ShowView { event :: Event }
 
 instance View ShowView where
-    html ShowView { .. } = [hsx|
-        <p>{eventWidget event}</p>
-
-    |]
+    html ShowView { .. } = eventWidget event
