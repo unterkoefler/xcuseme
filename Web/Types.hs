@@ -48,5 +48,6 @@ data Statistics = Statistics {
     excuseCount :: Int,
     exerciseCount :: Int,
     currentExerciseStreak :: Int,
-    longestExerciseStreak :: Int
+    longestExerciseStreak :: Int,
+    frequentExcuses :: [(Text, Int)]
 }

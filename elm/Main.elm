@@ -1422,7 +1422,7 @@ viewFlashMessage flashMessage =
 
 
 viewStats : Statistics -> Element Msg
-viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseStreak } =
+viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseStreak, frequentExcuses } =
     let
         pieData : List ( Float, String )
         pieData =
@@ -1436,10 +1436,15 @@ viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseSt
                 [ Colors.teal
                 , Colors.red
                 ]
+
+        barData : List ( Float, String )
+        barData =
+            List.map (\( token, count ) -> ( toFloat count, token )) frequentExcuses
     in
     column
         [ spacing 14
         , paddingXY 20 0
+        , width fill
         ]
         [ paragraph [ Region.heading 2, Font.size 24 ] [ text "All time statistics" ]
         , paragraph [] [ text <| "Current exercise streak: " ++ String.fromInt currentExerciseStreak ]
@@ -1448,6 +1453,12 @@ viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseSt
             |> Chart.colors pieColors
             |> Chart.addValueToLabel
             |> Chart.updateStyles "container" [ ( "background-color", "white" ) ]
+            |> Chart.toHtml
+            |> Element.html
+        , Chart.hBar barData
+            -- TODO: make a better chart
+            |> Chart.updateStyles "container" [ ( "background-color", "white" ), ( "width", "90%" ) ]
+            |> Chart.title "Words used most frequently in excuses"
             |> Chart.toHtml
             |> Element.html
         ]

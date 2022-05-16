@@ -3,6 +3,8 @@ module Web.Controller.Stats where
 import Web.Controller.Prelude
 import Web.View.Stats.Index
 import qualified Generated.Types
+import NLP.Tokenize.Text
+import qualified Data.Set
 
 instance Controller StatsController where
     action StatsAction = do
@@ -14,7 +16,12 @@ instance Controller StatsController where
         let exerciseCount = numExercises events
         let currentExerciseStreak = currentExerciseStreakF events
         let longestExerciseStreak = longestExerciseStreakF events
+        let frequentExcuses = filter (\(w, count) -> count > 1) . sortBy sorter . counts . filter (\w -> notElem w boringWords) . excuseWords $ events
         render IndexView { stats = Statistics { .. } }
+
+sorter :: (Text, Int) -> (Text, Int) -> Ordering
+sorter count1 count2 =
+    compare (snd count2) (snd count1)
 
 numExcuses :: [Event] -> Int
 numExcuses =
@@ -59,3 +66,70 @@ currentStreak (first:second:rest) =
 filterExercises :: [Event] -> [Event]
 filterExercises =
     filter (\e -> Generated.Types.eventType e == Exercise)
+
+
+filterExcuses :: [Event] -> [Event]
+filterExcuses =
+    filter (\e -> Generated.Types.eventType e == Excuse)
+
+
+counts :: [Text] -> [(Text, Int)]
+counts [] = []
+counts (x:xs) = (x, succ . length . filter (== x) $ xs):counts (filter (/= x) xs)
+
+excuseWords :: [Event] -> [Text]
+excuseWords events =
+    let blob :: Text
+        blob =
+            foldl (\acc event -> acc ++ description event ++ " ") "" (filterExcuses events)
+
+
+    in
+        NLP.Tokenize.Text.run myTokenizer $ toLower blob
+
+boringWords :: Set Text
+boringWords =
+    Data.Set.fromList
+        [ "and"
+        , "in"
+        , "."
+        , "on"
+        , "then"
+        , "the"
+        , "was"
+        , "it"
+        , "went"
+        , "from"
+        , "to"
+        , "a"
+        , "not"
+        , "i"
+        , "for"
+        , "at"
+        , "but"
+        , "too"
+        , "also"
+        , "got"
+        , "am"
+        , "an"
+        , "really"
+        , "of"
+        , "very"
+        , "with"
+        , "lot"
+        , "my"
+        , "("
+        , ")"
+        , "had"
+        , "going"
+
+        , "w"
+        , ","
+        , ":"
+        ]
+
+myTokenizer :: Tokenizer
+myTokenizer =     whitespace
+              >=> uris
+              >=> punctuation
+              >=> contractions

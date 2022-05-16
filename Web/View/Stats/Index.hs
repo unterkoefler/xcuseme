@@ -6,4 +6,6 @@ data IndexView = IndexView {
 }
 
 instance View IndexView where
-    html IndexView { .. }= statsWidget stats
+    html IndexView { .. } = [hsx|
+        <div>{statsWidget stats}</div>
+    |]

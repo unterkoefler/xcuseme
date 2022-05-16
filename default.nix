@@ -13,6 +13,7 @@ let
             hlint
             p.ihp
             haskell-to-elm
+            tokenize
         ];
         otherDeps = p: with p; [
             # Native dependencies, e.g. imagemagick

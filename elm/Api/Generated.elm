@@ -368,6 +368,7 @@ type alias Statistics =
     , exerciseCount : Int
     , currentExerciseStreak : Int
     , longestExerciseStreak : Int
+    , frequentExcuses : List ( String, Int )
     }
 
 
@@ -378,6 +379,18 @@ statisticsEncoder a =
         , ( "exerciseCount", Json.Encode.int a.exerciseCount )
         , ( "currentExerciseStreak", Json.Encode.int a.currentExerciseStreak )
         , ( "longestExerciseStreak", Json.Encode.int a.longestExerciseStreak )
+        , ( "frequentExcuses"
+          , Json.Encode.list
+                (\b ->
+                    case b of
+                        ( c, d ) ->
+                            Json.Encode.list identity
+                                [ Json.Encode.string c
+                                , Json.Encode.int d
+                                ]
+                )
+                a.frequentExcuses
+          )
         ]
 
 
@@ -388,3 +401,4 @@ statisticsController =
         |> Json.Decode.Pipeline.required "exerciseCount" Json.Decode.int
         |> Json.Decode.Pipeline.required "currentExerciseStreak" Json.Decode.int
         |> Json.Decode.Pipeline.required "longestExerciseStreak" Json.Decode.int
+        |> Json.Decode.Pipeline.required "frequentExcuses" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.int)))
