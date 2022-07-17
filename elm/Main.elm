@@ -56,6 +56,8 @@ type alias Model =
     , showLogEventModal : Bool
     , flashMessage : Maybe FlashMessage
     , showMenu : Bool
+    , isEventSaving : Bool
+    , isEventDeleting : Bool
     }
 
 
@@ -174,7 +176,7 @@ update msg model =
         CreateEvent ->
             case model.widget of
                 NewEventModel event ->
-                    ( { model | flashMessage = Nothing }
+                    ( { model | flashMessage = Nothing, isEventSaving = True }
                     , Api.createEvent { event = event, dateText = model.pickerDateText }
                         EventCreated
                     )
@@ -187,24 +189,24 @@ update msg model =
                 errorMsg =
                     httpErrorToString e
             in
-            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just, isEventSaving = False }
             , Cmd.none
             )
 
         EventCreated (Ok event) ->
             case event.errors of
                 [] ->
-                    ( model, Browser.Navigation.load Urls.root )
+                    ( { model | isEventSaving = False }, Browser.Navigation.load Urls.root )
 
                 _ ->
-                    ( { model | widget = NewEventModel event }
+                    ( { model | widget = NewEventModel event, isEventSaving = False }
                     , Cmd.none
                     )
 
         UpdateEvent ->
             case model.widget of
                 EditEventModel event ->
-                    ( model, Api.updateEvent { event = event, dateText = model.pickerDateText } EventUpdated )
+                    ( { model | isEventSaving = True }, Api.updateEvent { event = event, dateText = model.pickerDateText } EventUpdated )
 
                 _ ->
                     ( model, Cmd.none )
@@ -214,24 +216,24 @@ update msg model =
                 errorMsg =
                     httpErrorToString e
             in
-            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just, isEventSaving = False }
             , Cmd.none
             )
 
         EventUpdated (Ok event) ->
             case event.errors of
                 [] ->
-                    ( model
+                    ( { model | isEventSaving = False }
                     , Browser.Navigation.load <| Urls.showEvent event.id
                     )
 
                 _ ->
-                    ( { model | widget = EditEventModel event }
+                    ( { model | widget = EditEventModel event, isEventSaving = False }
                     , Cmd.none
                     )
 
         DeleteEvent event ->
-            ( { model | flashMessage = Nothing }
+            ( { model | flashMessage = Nothing, isEventDeleting = True }
             , Api.deleteEvent event EventDeleted
             )
 
@@ -240,12 +242,12 @@ update msg model =
                 errorMsg =
                     httpErrorToString e
             in
-            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just }
+            ( { model | flashMessage = ErrorFlashMessage errorMsg |> Just, isEventDeleting = False }
             , Cmd.none
             )
 
         EventDeleted (Ok ()) ->
-            ( model
+            ( { model | isEventDeleting = False }
             , Browser.Navigation.load Urls.root
             )
 
@@ -524,6 +526,7 @@ view model =
                     , pickerDateText = model.pickerDateText
                     , onSave = CreateEvent
                     , deleteButton = Element.none
+                    , isEventSaving = model.isEventSaving
                     }
 
             EditEventModel event ->
@@ -533,7 +536,8 @@ view model =
                     , currentDate = model.currentDate
                     , pickerDateText = model.pickerDateText
                     , onSave = UpdateEvent
-                    , deleteButton = deleteEventButton event
+                    , deleteButton = deleteEventButton { isEventDeleting = model.isEventDeleting } event
+                    , isEventSaving = model.isEventSaving
                     }
 
             AboutModel ->
@@ -1096,9 +1100,10 @@ eventForm :
     , pickerDateText : String
     , onSave : Msg
     , deleteButton : Element Msg
+    , isEventSaving : Bool
     }
     -> Element Msg
-eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButton } =
+eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButton, isEventSaving } =
     let
         defaultSettings =
             DatePicker.defaultSettings
@@ -1122,6 +1127,14 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
 
         dateError =
             errorMessageForField event.errors "date"
+
+        saveButtonLabel : String
+        saveButtonLabel =
+            if isEventSaving then
+                "Saving..."
+
+            else
+                "Save " ++ eventTypeStr
     in
     column
         [ spacing 24
@@ -1176,7 +1189,7 @@ eventForm { event, pickerModel, currentDate, pickerDateText, onSave, deleteButto
                 , paddingXY 24 12
                 , Background.color saveButtonColor
                 ]
-                { label = text <| "Save " ++ eventTypeStr
+                { label = text saveButtonLabel
                 , onPress = Just onSave
                 }
             ]
@@ -1321,11 +1334,20 @@ newUserForm { email, password, errors } { flashMessage } =
         ]
 
 
-deleteEventButton : Event -> Element Msg
-deleteEventButton event =
+deleteEventButton : { isEventDeleting : Bool } -> Event -> Element Msg
+deleteEventButton { isEventDeleting } event =
+    let
+        lbl : String
+        lbl =
+            if isEventDeleting then
+                "deleting..."
+
+            else
+                "delete"
+    in
     Input.button
         []
-        { label = text "delete"
+        { label = text lbl
         , onPress = event |> DeleteEvent |> Just
         }
 
@@ -1513,6 +1535,8 @@ init flags =
       , showLogEventModal = False
       , flashMessage = Nothing
       , showMenu = False
+      , isEventSaving = False
+      , isEventDeleting = False
       }
     , Date.today |> Task.perform ReceiveDate
     )
