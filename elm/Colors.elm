@@ -61,7 +61,7 @@ indigoDarker =
 
 
 success =
-    rgb255 143 255 143
+    rgb255 90 181 76
 
 
 info =

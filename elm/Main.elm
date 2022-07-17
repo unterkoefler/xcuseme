@@ -324,7 +324,6 @@ update msg model =
                     ( model, Cmd.none )
 
         LoggedIn (Err e) ->
-            -- TODO: cuz of the redirect nonsense, this probably won't work
             let
                 errorMsg =
                     httpErrorToString e
@@ -349,7 +348,6 @@ update msg model =
                     ( model, Cmd.none )
 
         UserCreated (Err e) ->
-            -- TODO: cuz of the redirect nonsense, this probably won't work
             let
                 errorMsg =
                     httpErrorToString e
@@ -693,7 +691,6 @@ borderBetween color elements =
 
 logEventButton : EventType -> Date -> List Event -> Element Msg
 logEventButton eventType selectedDate events =
-    -- TODO: disable if there is an existing event
     let
         eventTypeString =
             eventType |> eventTypeToString |> firstCharToUpper
