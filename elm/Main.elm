@@ -43,6 +43,7 @@ import Task
 import Time
 import Urls
 import Util exposing (icon)
+import WordCloud exposing (wordCloud)
 import XCalendar
 
 
@@ -1482,6 +1483,7 @@ viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseSt
             |> Chart.updateStyles "container" [ ( "background-color", "white" ) ]
             |> Chart.toHtml
             |> Element.html
+        , wordCloud frequentExcuses
         , MyChart.hBar barData
             |> MyChart.title "Words used most frequently in excuses"
             |> MyChart.toElement
