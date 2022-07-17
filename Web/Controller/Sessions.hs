@@ -2,7 +2,7 @@ module Web.Controller.Sessions where
 
 import Web.Controller.Prelude
 import Web.View.Sessions.New
-import qualified IHP.AuthSupport.Controller.Sessions as Sessions
+import qualified AuthSupport.Controller.Sessions as Sessions
 import Data.Aeson
 
 instance Controller SessionsController where

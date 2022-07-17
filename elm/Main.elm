@@ -382,7 +382,7 @@ httpErrorToString : Http.Error -> String
 httpErrorToString e =
     case e of
         Http.BadBody s ->
-            "Error: BadBody " ++ s
+            "Error: " ++ s
 
         Http.Timeout ->
             "Error: Request timed out."
@@ -550,7 +550,7 @@ view model =
                 viewFlashMessage flashMessage
 
             LoginModel data ->
-                loginForm data
+                loginForm data { flashMessage = model.flashMessage }
 
             NewUserModel data ->
                 newUserForm data { flashMessage = model.flashMessage }
@@ -608,7 +608,6 @@ navBar { loggedIn } showMenu =
                 [ Region.heading 1
                 , Font.size 28
                 , centerX
-                , width fill
                 , Font.center
                 , Font.color Colors.white
                 , paddingEach { top = 0, left = 24, right = 0, bottom = 0 }
@@ -1209,13 +1208,17 @@ relativeDateInfo { dateText, currentDate } =
                 |> paragraph [ Font.italic, Font.size 14 ]
 
 
-loginForm : { email : String, password : String } -> Element Msg
-loginForm { email, password } =
+loginForm :
+    { email : String, password : String }
+    -> { flashMessage : Maybe FlashMessage }
+    -> Element Msg
+loginForm { email, password } { flashMessage } =
     column
         [ spacing 24
         , paddingEach { left = 32, right = 0, top = 0, bottom = 0 }
         ]
-        [ Input.email
+        [ flashMessage |> Maybe.map viewFlashMessage |> Maybe.withDefault Element.none
+        , Input.email
             []
             { label = Input.labelAbove [] <| text "Email"
             , text = email

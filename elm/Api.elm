@@ -9,6 +9,7 @@ module Api exposing
 
 import Api.Generated exposing (Event, EventType(..), User, eventDecoder, eventTypeEncoder, userDecoder)
 import Http
+import Json.Decode as D
 import Json.Encode
 import Urls
 
@@ -69,10 +70,10 @@ login : { email : String, password : String } -> (Result Http.Error () -> msg) -
 login credentials onFinish =
     ihpRequest
         { method = post_method
-        , headers = [ Http.header "Accept" "text/html" ] -- TODO: don't do this
+        , headers = []
         , url = Urls.createSession
         , body = credentialsEncoder credentials |> Http.jsonBody
-        , expect = Http.expectWhatever onFinish
+        , expect = expectWhateverWithErrorMessage onFinish
         }
 
 
@@ -104,6 +105,11 @@ eventWithDateStringEncoder event dateText =
         ]
 
 
+errorDecoder : D.Decoder String
+errorDecoder =
+    D.field "errorMessage" D.string
+
+
 ihpRequest :
     { method : String
     , headers : List Http.Header
@@ -123,3 +129,30 @@ ihpRequest { method, headers, url, body, expect } =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+expectWhateverWithErrorMessage : (Result Http.Error () -> msg) -> Http.Expect msg
+expectWhateverWithErrorMessage toMsg =
+    Http.expectStringResponse toMsg <|
+        \response ->
+            case response of
+                Http.BadUrl_ url ->
+                    Err (Http.BadUrl url)
+
+                Http.Timeout_ ->
+                    Err Http.Timeout
+
+                Http.NetworkError_ ->
+                    Err Http.NetworkError
+
+                Http.BadStatus_ metadata body ->
+                    case D.decodeString errorDecoder body of
+                        Ok value ->
+                            Err (Http.BadBody value)
+
+                        -- TODO: custom error type
+                        Err _ ->
+                            Err (Http.BadStatus metadata.statusCode)
+
+                Http.GoodStatus_ metadata body ->
+                    Ok ()
