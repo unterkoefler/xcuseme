@@ -36,6 +36,7 @@ import Material.Icons.Action exposing (check_circle)
 import Material.Icons.Alert exposing (error_outline)
 import Material.Icons.Content exposing (add)
 import Material.Icons.Maps exposing (directions_run, hotel)
+import MyChart
 import RelativeDate
 import Svg exposing (Svg)
 import Task
@@ -704,19 +705,23 @@ logEventButton eventType selectedDate events =
         event : Maybe Event
         event =
             eventForDay events selectedDate
+
+        labelText : String
+        labelText =
+            "Log " ++ eventTypeString
     in
     case event of
         Nothing ->
             link
                 (fullWidthButtonAttrs color)
-                { label = text <| (++) "Log " eventTypeString
+                { label = text labelText
                 , url = url
                 }
 
         Just _ ->
             Input.button
                 (fullWidthButtonAttrs Colors.lightGray)
-                { label = text <| (++) "Log " eventTypeString
+                { label = text labelText
                 , onPress =
                     ErrorFlashMessage "You can log only one exercise or excuse per day"
                         |> Just
@@ -1477,12 +1482,9 @@ viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseSt
             |> Chart.updateStyles "container" [ ( "background-color", "white" ) ]
             |> Chart.toHtml
             |> Element.html
-        , Chart.hBar barData
-            -- TODO: make a better chart
-            |> Chart.updateStyles "container" [ ( "background-color", "white" ), ( "width", "90%" ) ]
-            |> Chart.title "Words used most frequently in excuses"
-            |> Chart.toHtml
-            |> Element.html
+        , MyChart.hBar barData
+            |> MyChart.title "Words used most frequently in excuses"
+            |> MyChart.toElement
         ]
 
 

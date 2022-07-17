@@ -126,6 +126,7 @@ boringWords =
         , "w"
         , ","
         , ":"
+        , "day"
         ]
 
 myTokenizer :: Tokenizer
