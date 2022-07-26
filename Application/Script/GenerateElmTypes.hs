@@ -11,6 +11,7 @@ import Language.Haskell.To.Elm
 import qualified System.Directory as Directory
 import Web.JsonTypes
 import Web.Types
+import Application.WordCloud
 
 run :: Script
 run = do
@@ -30,5 +31,8 @@ run = do
                 <> jsonDefinitions @FlashMessage
                 <> jsonDefinitions @UserJSON
                 <> jsonDefinitions @Statistics
+                <> jsonDefinitions @PlacedWord
+                <> jsonDefinitions @Position
+                <> jsonDefinitions @Datum
 
     modules = Pretty.modules definitions

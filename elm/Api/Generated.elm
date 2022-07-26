@@ -1,12 +1,17 @@
 module Api.Generated exposing
-    ( Event
+    ( Datum
+    , Event
     , EventType(..)
     , FlashMessage(..)
     , NavBarContext
+    , PlacedWord
+    , Position
     , Statistics
     , User
     , Violation(..)
     , Widget(..)
+    , datumDecoder
+    , datumEncoder
     , eventDecoder
     , eventEncoder
     , eventTypeDecoder
@@ -15,6 +20,10 @@ module Api.Generated exposing
     , flashMessageEncoder
     , navBarContextDecoder
     , navBarContextEncoder
+    , placedWordDecoder
+    , placedWordEncoder
+    , positionDecoder
+    , positionEncoder
     , statisticsController
     , statisticsEncoder
     , userDecoder
@@ -369,6 +378,7 @@ type alias Statistics =
     , currentExerciseStreak : Int
     , longestExerciseStreak : Int
     , frequentExcuses : List ( String, Int )
+    , cloud : List PlacedWord
     }
 
 
@@ -391,6 +401,7 @@ statisticsEncoder a =
                 )
                 a.frequentExcuses
           )
+        , ( "cloud", Json.Encode.list placedWordEncoder a.cloud )
         ]
 
 
@@ -402,3 +413,67 @@ statisticsController =
         |> Json.Decode.Pipeline.required "currentExerciseStreak" Json.Decode.int
         |> Json.Decode.Pipeline.required "longestExerciseStreak" Json.Decode.int
         |> Json.Decode.Pipeline.required "frequentExcuses" (Json.Decode.list (Json.Decode.map2 Tuple.pair (Json.Decode.index 0 Json.Decode.string) (Json.Decode.index 1 Json.Decode.int)))
+        |> Json.Decode.Pipeline.required "cloud" (Json.Decode.list placedWordDecoder)
+
+
+type alias PlacedWord =
+    { word : Datum, position : Position }
+
+
+placedWordEncoder : PlacedWord -> Json.Encode.Value
+placedWordEncoder a =
+    Json.Encode.object
+        [ ( "word", datumEncoder a.word )
+        , ( "position", positionEncoder a.position )
+        ]
+
+
+placedWordDecoder : Json.Decode.Decoder PlacedWord
+placedWordDecoder =
+    Json.Decode.succeed PlacedWord
+        |> Json.Decode.Pipeline.required "word" datumDecoder
+        |> Json.Decode.Pipeline.required "position" positionDecoder
+
+
+type alias Position =
+    { x : Float, y : Float }
+
+
+positionEncoder : Position -> Json.Encode.Value
+positionEncoder a =
+    Json.Encode.object
+        [ ( "x", Json.Encode.float a.x )
+        , ( "y", Json.Encode.float a.y )
+        ]
+
+
+positionDecoder : Json.Decode.Decoder Position
+positionDecoder =
+    Json.Decode.succeed Position
+        |> Json.Decode.Pipeline.required "x" Json.Decode.float
+        |> Json.Decode.Pipeline.required "y" Json.Decode.float
+
+
+type alias Datum =
+    { count : Int, label : String, fontSize : Int, width : Int, height : Int }
+
+
+datumEncoder : Datum -> Json.Encode.Value
+datumEncoder a =
+    Json.Encode.object
+        [ ( "count", Json.Encode.int a.count )
+        , ( "label", Json.Encode.string a.label )
+        , ( "fontSize", Json.Encode.int a.fontSize )
+        , ( "width", Json.Encode.int a.width )
+        , ( "height", Json.Encode.int a.height )
+        ]
+
+
+datumDecoder : Json.Decode.Decoder Datum
+datumDecoder =
+    Json.Decode.succeed Datum
+        |> Json.Decode.Pipeline.required "count" Json.Decode.int
+        |> Json.Decode.Pipeline.required "label" Json.Decode.string
+        |> Json.Decode.Pipeline.required "fontSize" Json.Decode.int
+        |> Json.Decode.Pipeline.required "width" Json.Decode.int
+        |> Json.Decode.Pipeline.required "height" Json.Decode.int

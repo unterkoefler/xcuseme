@@ -1450,7 +1450,7 @@ viewFlashMessage flashMessage =
 
 
 viewStats : Statistics -> Element Msg
-viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseStreak, frequentExcuses } =
+viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseStreak, frequentExcuses, cloud } =
     let
         pieData : List ( Float, String )
         pieData =
@@ -1483,10 +1483,8 @@ viewStats { excuseCount, exerciseCount, currentExerciseStreak, longestExerciseSt
             |> Chart.updateStyles "container" [ ( "background-color", "white" ) ]
             |> Chart.toHtml
             |> Element.html
-        , wordCloud frequentExcuses
-        , MyChart.hBar barData
-            |> MyChart.title "Words used most frequently in excuses"
-            |> MyChart.toElement
+        , paragraph [ Region.heading 3, Font.size 24, Font.color Colors.red ] [ text "Your Excuses" ]
+        , wordCloud cloud
         ]
 
 

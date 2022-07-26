@@ -4,6 +4,7 @@ import IHP.Prelude
 import IHP.ModelSupport
 import IHP.LoginSupport.Types
 import Generated.Types
+import Application.WordCloud
 
 data WebApplication = WebApplication deriving (Eq, Show)
 
@@ -49,5 +50,6 @@ data Statistics = Statistics {
     exerciseCount :: Int,
     currentExerciseStreak :: Int,
     longestExerciseStreak :: Int,
-    frequentExcuses :: [(Text, Int)]
+    frequentExcuses :: [(Text, Int)],
+    cloud :: [PlacedWord]
 }

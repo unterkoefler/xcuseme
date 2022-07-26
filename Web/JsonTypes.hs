@@ -12,10 +12,67 @@ import Language.Haskell.To.Elm
 import Application.Lib.DerivingViaElm ( ElmType(..) )
 import Data.Time
 import IHP.ModelSupport ( Violation(..) )
-import Data.Char(toLower)
+import Data.Char (toLower)
+import Application.WordCloud
 
 -- JSON serializable types and functions
 -- -- for exposing IHP data to Elm and JSON responses
+
+deriving instance Generic Datum
+deriving instance SOP.Generic Datum
+deriving instance SOP.HasDatatypeInfo Datum
+deriving instance Aeson.ToJSON Datum
+deriving instance Aeson.FromJSON Datum
+
+instance HasElmType Datum where
+    elmDefinition =
+        Just $ deriveElmTypeDefinition @Datum defaultOptions "Api.Generated.Datum"
+
+instance HasElmDecoder Aeson.Value Datum where
+    elmDecoderDefinition =
+        Just $ deriveElmJSONDecoder @Datum defaultOptions Aeson.defaultOptions "Api.Generated.datumDecoder"
+
+instance HasElmEncoder Aeson.Value Datum where
+    elmEncoderDefinition =
+        Just $ deriveElmJSONEncoder @Datum defaultOptions Aeson.defaultOptions "Api.Generated.datumEncoder"
+
+deriving instance Generic Position
+deriving instance SOP.Generic Position
+deriving instance SOP.HasDatatypeInfo Position
+deriving instance Aeson.ToJSON Position
+deriving instance Aeson.FromJSON Position
+
+instance HasElmType Position where
+    elmDefinition =
+        Just $ deriveElmTypeDefinition @Position defaultOptions "Api.Generated.Position"
+
+instance HasElmDecoder Aeson.Value Position where
+    elmDecoderDefinition =
+        Just $ deriveElmJSONDecoder @Position defaultOptions Aeson.defaultOptions "Api.Generated.positionDecoder"
+
+instance HasElmEncoder Aeson.Value Position where
+    elmEncoderDefinition =
+        Just $ deriveElmJSONEncoder @Position defaultOptions Aeson.defaultOptions "Api.Generated.positionEncoder"
+
+
+deriving instance Generic PlacedWord
+deriving instance SOP.Generic PlacedWord
+deriving instance SOP.HasDatatypeInfo PlacedWord
+deriving instance Aeson.ToJSON PlacedWord
+deriving instance Aeson.FromJSON PlacedWord
+
+instance HasElmType PlacedWord where
+    elmDefinition =
+        Just $ deriveElmTypeDefinition @PlacedWord defaultOptions "Api.Generated.PlacedWord"
+
+instance HasElmDecoder Aeson.Value PlacedWord where
+    elmDecoderDefinition =
+        Just $ deriveElmJSONDecoder @PlacedWord defaultOptions Aeson.defaultOptions "Api.Generated.placedWordDecoder"
+
+instance HasElmEncoder Aeson.Value PlacedWord where
+    elmEncoderDefinition =
+        Just $ deriveElmJSONEncoder @PlacedWord defaultOptions Aeson.defaultOptions "Api.Generated.placedWordEncoder"
+
 
 deriving instance Generic Statistics
 deriving instance SOP.Generic Statistics

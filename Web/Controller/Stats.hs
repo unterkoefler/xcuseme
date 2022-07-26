@@ -5,6 +5,7 @@ import Web.View.Stats.Index
 import qualified Generated.Types
 import NLP.Tokenize.Text
 import qualified Data.Set
+import Application.WordCloud
 
 instance Controller StatsController where
     action StatsAction = do
@@ -17,6 +18,7 @@ instance Controller StatsController where
         let currentExerciseStreak = currentExerciseStreakF events
         let longestExerciseStreak = longestExerciseStreakF events
         let frequentExcuses = filter (\(w, count) -> count > 1) . sortBy sorter . counts . filter (\w -> notElem w boringWords) . excuseWords $ events
+        let cloud = wordCloud frequentExcuses
         render IndexView { stats = Statistics { .. } }
 
 sorter :: (Text, Int) -> (Text, Int) -> Ordering
