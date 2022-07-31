@@ -36,7 +36,6 @@ import Material.Icons.Action exposing (check_circle)
 import Material.Icons.Alert exposing (error_outline)
 import Material.Icons.Content exposing (add)
 import Material.Icons.Maps exposing (directions_run, hotel)
-import MyChart
 import RelativeDate
 import Svg exposing (Svg)
 import Task
