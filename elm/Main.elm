@@ -604,17 +604,24 @@ navBar { loggedIn } showMenu =
             , padding 16
             , Background.color Colors.indigo
             ]
-            [ link
-                [ Region.heading 1
-                , Font.size 28
+            [ column
+                [ spacing 4
                 , centerX
-                , Font.center
-                , Font.color Colors.white
+                , width fill
                 , paddingEach { top = 0, left = 24, right = 0, bottom = 0 }
                 ]
-                { label = text "XcuseMe"
-                , url = Urls.root
-                }
+                [ link
+                    [ Region.heading 1
+                    , Font.size 28
+                    , centerX
+                    , Font.center
+                    , Font.color Colors.white
+                    ]
+                    { label = text "XcuseMe"
+                    , url = Urls.root
+                    }
+                , paragraph [ Font.size 10, Font.italic, Font.center ] [ text "Exercise tracking for real people" ]
+                ]
             , menuButton
             ]
         , menu
