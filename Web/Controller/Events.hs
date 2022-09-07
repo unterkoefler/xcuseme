@@ -26,11 +26,7 @@ instance Controller EventsController where
                 render IndexView { .. }
 
     action NewEventAction { eventType, year, month, day } = do
-        let eventType' = do
-            case toLower eventType of
-                "exercise" -> Exercise
-                "excuse" -> Excuse
-                _ -> Exercise
+        let eventType' = eventTypeFromParam eventType
         date <- do
             case (year, month, day) of
                 (Just y, Just m, Just d) ->
@@ -88,3 +84,13 @@ buildEvent event = event
     |> fill @["eventType","description","date"]
     |> validateField #description nonEmpty
     |> validateIsUniqueTwoColumn #userId #date (Just "non_unique_date")
+
+eventTypeFromParam :: Text -> EventType
+eventTypeFromParam eventType =
+    case toLower eventType of
+        "exercise" ->
+            Exercise
+        "excuse" ->
+            Excuse
+        _ ->
+            Exercise
