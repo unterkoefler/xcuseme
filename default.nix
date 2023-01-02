@@ -20,6 +20,7 @@ let
             elmPackages.elm
             yarn
             nodejs-16_x
+            elmPackages.elm-format
         ];
         projectPath = ./.;
     };

@@ -124,7 +124,7 @@ update msg model =
                 , pickerModel = DatePicker.setToday date model.pickerModel
                 , pickerDateText =
                     if model.pickerDateText == "" then
-                        Date.format "Y-MM-dd" date
+                        Date.format "yyyy-MM-dd" date
 
                     else
                         model.pickerDateText
@@ -450,7 +450,7 @@ updateEventDateAndClosePicker model event date =
     { model
         | widget = newWidget
         , pickerModel = model.pickerModel |> DatePicker.close
-        , pickerDateText = Date.format "Y-MM-dd" date
+        , pickerDateText = Date.format "yyyy-MM-dd" date
     }
 
 
@@ -867,7 +867,7 @@ viewEvent event =
         , paddingXY 48 0
         ]
         [ row [ width fill ] [ titleEl, editLink ]
-        , paragraph [ Font.italic, Font.size 12 ] [ text <| Date.format "EEEE MMMM d, YYYY" <| eventToDate event ]
+        , paragraph [ Font.italic, Font.size 12 ] [ text <| Date.format "EEEE MMMM d, yyyy" <| eventToDate event ]
         , paragraph [ Font.size 14 ] [ text event.description ]
         ]
 
@@ -1525,10 +1525,10 @@ init flags =
         pickerDateText =
             case widget of
                 NewEventModel event ->
-                    Date.format "Y-MM-dd" <| eventToDate event
+                    Date.format "yyyy-MM-dd" <| eventToDate event
 
                 EditEventModel event ->
-                    Date.format "Y-MM-dd" <| eventToDate event
+                    Date.format "yyyy-MM-dd" <| eventToDate event
 
                 _ ->
                     ""

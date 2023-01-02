@@ -20,7 +20,7 @@
             "elm/url": "1.0.0",
             "elm-community/basics-extra": "4.1.0",
             "elm-community/maybe-extra": "5.3.0",
-            "fabhof/elm-ui-datepicker": "4.0.0",
+            "fabhof/elm-ui-datepicker": "5.0.0",
             "justinmimbs/date": "3.2.1",
             "mdgriffith/elm-ui": "1.1.8",
             "munksgaard/elm-charts": "1.0.0",
